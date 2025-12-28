@@ -1,0 +1,28 @@
+# Build
+build/
+*.o
+*.obj
+moc_*
+*.moc
+ui_*
+qrc_*
+Makefile
+.qmake.stash
+
+# Binaries
+goobert
+*.exe
+*.dll
+*.so
+*.dylib
+
+# IDE
+.idea/
+.vscode/
+*.pro.user*
+*.creator.user*
+CMakeUserPresets.json
+
+# OS
+.DS_Store
+Thumbs.db
