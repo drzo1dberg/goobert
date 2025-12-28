@@ -92,7 +92,7 @@ private:
 
     // Skipper state
     double m_skipPercent = 0.33;
-    bool m_skipperEnabled = false;  // disabled for now
+    bool m_skipperEnabled = true;
 	QSet<QString> m_seenFiles;
 
     // Video transform state

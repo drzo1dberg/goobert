@@ -1,5 +1,6 @@
 #include "mainwindow.h"
 #include "filescanner.h"
+#include "config.h"
 #include <QKeyEvent>
 #include <QWheelEvent>
 #include <QMouseEvent>
@@ -416,24 +417,26 @@ void MainWindow::seekSelected(double seconds)
 
 void MainWindow::wheelEvent(QWheelEvent *event)
 {
-    Qt::KeyboardModifiers mods = event->modifiers();
-    int delta = event->angleDelta().y();
+    int hdelta = event->angleDelta().x();
+    int vdelta = event->angleDelta().y();
 
-    if (mods == Qt::NoModifier) {
-        // WHEEL_DOWN/UP: frame step (based on vertical scroll)
-        if (delta < 0) {
-            frameStepSelected();
-        } else if (delta > 0) {
-            frameBackStepSelected();
-        }
-    } else if (mods & Qt::ShiftModifier) {
-        // Horizontal-like seek (with Shift held)
-        int hdelta = event->angleDelta().x();
-        if (hdelta == 0) hdelta = delta;  // fallback
+    Config &cfg = Config::instance();
+    int seekAmount = cfg.seekAmountSeconds();
+
+    // Horizontal scroll (side scroll on MX Master): seek by configured amount
+    if (hdelta != 0) {
         if (hdelta < 0) {
-            seekSelected(-30);
-        } else if (hdelta > 0) {
-            seekSelected(30);
+            seekSelected(-seekAmount);
+        } else {
+            seekSelected(seekAmount);
+        }
+    }
+    // Vertical scroll: frame step
+    else if (vdelta != 0) {
+        if (vdelta < 0) {
+            frameStepSelected();
+        } else {
+            frameBackStepSelected();
         }
     }
 

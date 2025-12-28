@@ -1,4 +1,6 @@
 #include "mpvwidget.h"
+#include "config.h"
+#include <QOpenGLFunctions>
 #include <QOpenGLContext>
 #include <QMetaObject>
 #include <QDebug>
@@ -16,6 +18,10 @@ MpvWidget::MpvWidget(QWidget *parent)
     : QOpenGLWidget(parent)
 {
     setMinimumSize(100, 100);
+
+    setUpdateBehavior(QOpenGLWidget::NoPartialUpdate);
+    setAutoFillBackground(false);
+    setAttribute(Qt::WA_OpaquePaintEvent);
 }
 
 MpvWidget::~MpvWidget()
@@ -38,13 +44,19 @@ void MpvWidget::createMpv()
     mpv_set_option_string(m_mpv, "terminal", "no");
     mpv_set_option_string(m_mpv, "msg-level", "all=no");
     mpv_set_option_string(m_mpv, "vo", "libmpv");
-    mpv_set_option_string(m_mpv, "hwdec", "auto-copy");
+    mpv_set_option_string(m_mpv, "hwdec", "no");
     mpv_set_option_string(m_mpv, "keep-open", "no");
     mpv_set_option_string(m_mpv, "idle", "yes");
     mpv_set_option_string(m_mpv, "input-default-bindings", "no");
     mpv_set_option_string(m_mpv, "input-vo-keyboard", "no");
     mpv_set_option_string(m_mpv, "osc", "no");
     mpv_set_option_string(m_mpv, "loop-playlist", "inf");
+
+    // Load settings from config
+    Config &cfg = Config::instance();
+    mpv_set_option_string(m_mpv, "loop-file", QString::number(cfg.loopCount()).toUtf8().constData());
+    mpv_set_option_string(m_mpv, "image-display-duration", QString::number(cfg.imageDisplayDuration()).toUtf8().constData());
+    mpv_set_option_string(m_mpv, "volume", QString::number(cfg.defaultVolume()).toUtf8().constData());
 
     if (mpv_initialize(m_mpv) < 0)
         throw std::runtime_error("Failed to initialize mpv");
@@ -116,6 +128,11 @@ void MpvWidget::paintGL()
     if (!m_mpvGl)
         return;
 
+    auto *f = QOpenGLContext::currentContext()->functions();
+    f->glViewport(0, 0, width(), height());
+    f->glClearColor(0.f, 0.f, 0.f, 1.f);
+    f->glClear(GL_COLOR_BUFFER_BIT);
+
     mpv_opengl_fbo fbo{
         .fbo = static_cast<int>(defaultFramebufferObject()),
         .w = width(),
@@ -123,7 +140,6 @@ void MpvWidget::paintGL()
     };
 
     int flip_y = 1;
-
     mpv_render_param params[]{
         {MPV_RENDER_PARAM_OPENGL_FBO, &fbo},
         {MPV_RENDER_PARAM_FLIP_Y, &flip_y},

@@ -1,0 +1,33 @@
+# Goobert Configuration File
+# Copy this to ~/.config/goobert/goobert.ini to customize settings
+# All values shown here are defaults
+
+[playback]
+# Number of times to loop each file (0 = no loop, -1 = infinite)
+loop_count=5
+
+# Default volume (0-100)
+default_volume=30
+
+# How long to display images in seconds
+image_display_duration=2.5
+
+[grid]
+# Default grid dimensions (rows × cols)
+default_rows=3
+default_cols=3
+
+[paths]
+# Default media directory (leave empty for system Movies folder)
+default_media_path=
+
+[skipper]
+# Enable auto-skip to percentage on file load
+enabled=true
+
+# Skip to this percentage (0.0-1.0, e.g., 0.33 = 33%)
+skip_percent=0.33
+
+[seek]
+# Seek amount in seconds when using horizontal scroll
+amount_seconds=30

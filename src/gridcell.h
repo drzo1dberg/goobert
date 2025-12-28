@@ -74,4 +74,5 @@ private:
     double m_duration = 0;
     bool m_paused = false;
     bool m_looping = false;
+    double m_lastEmitPos = -1.0;  // Per-instance throttle state
 };

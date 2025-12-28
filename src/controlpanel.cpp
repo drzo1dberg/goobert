@@ -1,15 +1,22 @@
 #include "controlpanel.h"
+#include "config.h"
 #include <QVBoxLayout>
 #include <QHBoxLayout>
 #include <QFileDialog>
 #include <QHeaderView>
 #include <QDateTime>
+#include <QFileInfo>
 
 ControlPanel::ControlPanel(const QString &sourceDir, QWidget *parent)
     : QWidget(parent)
 {
     setupUi();
-    m_sourceEdit->setText(sourceDir);
+
+    Config &cfg = Config::instance();
+
+    // Use provided source dir or config default
+    QString initialDir = sourceDir.isEmpty() ? cfg.defaultMediaPath() : sourceDir;
+    m_sourceEdit->setText(initialDir);
 }
 
 void ControlPanel::setupUi()
@@ -34,17 +41,19 @@ void ControlPanel::setupUi()
     auto *row1 = new QHBoxLayout();
     row1->setSpacing(8);
 
+    Config &cfg = Config::instance();
+
     row1->addWidget(new QLabel("Grid"));
     m_colsSpin = new QSpinBox();
     m_colsSpin->setRange(1, 10);
-    m_colsSpin->setValue(3);
+    m_colsSpin->setValue(cfg.defaultCols());
     row1->addWidget(m_colsSpin);
 
     row1->addWidget(new QLabel("×"));
 
     m_rowsSpin = new QSpinBox();
     m_rowsSpin->setRange(1, 10);
-    m_rowsSpin->setValue(3);
+    m_rowsSpin->setValue(cfg.defaultRows());
     row1->addWidget(m_rowsSpin);
 
     row1->addSpacing(12);
@@ -104,9 +113,9 @@ void ControlPanel::setupUi()
     row1->addWidget(new QLabel("Vol"));
     m_volumeSlider = new QSlider(Qt::Horizontal);
     m_volumeSlider->setRange(0, 100);
-    m_volumeSlider->setValue(30);
     m_volumeSlider->setFixedWidth(80);
     connect(m_volumeSlider, &QSlider::valueChanged, this, &ControlPanel::volumeChanged);
+    m_volumeSlider->setValue(cfg.defaultVolume());  // Set after connect so signal is emitted
     row1->addWidget(m_volumeSlider);
 
     mainLayout->addLayout(row1);

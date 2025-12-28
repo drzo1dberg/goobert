@@ -21,6 +21,7 @@ set(SOURCES
     src/gridcell.cpp
     src/controlpanel.cpp
     src/filescanner.cpp
+    src/config.cpp
 )
 
 set(HEADERS
@@ -30,6 +31,7 @@ set(HEADERS
     src/gridcell.h
     src/controlpanel.h
     src/filescanner.h
+    src/config.h
 )
 
 # Executable

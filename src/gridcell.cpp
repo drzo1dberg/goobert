@@ -188,4 +188,14 @@ void GridCell::onFileChanged(const QString &path)
 void GridCell::onPositionChanged(double pos)
 {
     m_position = pos;
+
+    // Throttle auf ~4Hz, sonst zu viele UI-Updates
+    static constexpr double kMinIntervalSec = 0.25;
+
+    if (m_lastEmitPos < 0 || (m_position - m_lastEmitPos) >= kMinIntervalSec || (m_lastEmitPos - m_position) >= kMinIntervalSec) {
+        m_lastEmitPos = m_position;
+        if (!m_currentFile.isEmpty()) {
+            emit fileChanged(m_row, m_col, m_currentFile, m_position, m_duration, m_paused);
+        }
+    }
 }

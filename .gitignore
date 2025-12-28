@@ -1,5 +1,21 @@
-# Build
+# Claude Code AI assistant file
+CLAUDE.md
+
+# Build directories
 build/
+build-*/
+cmake-build-*/
+.build/
+
+# CMake
+CMakeCache.txt
+CMakeFiles/
+cmake_install.cmake
+CTestTestfile.cmake
+install_manifest.txt
+compile_commands.json
+
+# Qt/QMake
 *.o
 *.obj
 moc_*
@@ -8,21 +24,44 @@ ui_*
 qrc_*
 Makefile
 .qmake.stash
+*_autogen/
+*_automoc.cpp
 
 # Binaries
 goobert
 *.exe
 *.dll
 *.so
+*.so.*
 *.dylib
+*.a
+*.lib
 
 # IDE
 .idea/
 .vscode/
 *.pro.user*
 *.creator.user*
+*.autosave
 CMakeUserPresets.json
+.clangd/
+.cache/
+compile_flags.txt
 
 # OS
 .DS_Store
 Thumbs.db
+*.swp
+*.swo
+*~
+.directory
+
+# User config (don't commit personal configs)
+goobert.ini
+
+# Logs
+*.log
+
+# Package managers
+.conan/
+vcpkg_installed/
