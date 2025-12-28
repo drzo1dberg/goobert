@@ -1,0 +1,44 @@
+[package]
+name = "goobert"
+version = "0.1.0"
+edition = "2021"
+description = "High-performance video wall application"
+authors = ["drzo1dberg"]
+license = "MIT"
+
+[dependencies]
+# GUI Framework
+eframe = { version = "0.29", features = ["glow"] }
+egui = "0.29"
+egui_glow = "0.29"
+
+# Video playback
+libmpv = "2.0"
+
+# OpenGL
+glow = "0.14"
+
+# File operations
+walkdir = "2.5"
+
+# Configuration
+serde = { version = "1.0", features = ["derive"] }
+toml = "0.8"
+directories = "5.0"
+
+# Utilities
+rand = "0.8"
+arboard = "3.4"
+chrono = "0.4"
+log = "0.4"
+env_logger = "0.11"
+rfd = "0.15"
+dirs = "5.0"
+
+# Error handling
+anyhow = "1.0"
+thiserror = "1.0"
+
+[profile.release]
+opt-level = 3
+lto = true
