@@ -60,6 +60,7 @@ signals:
 protected:
     void mousePressEvent(QMouseEvent *event) override;
     void mouseDoubleClickEvent(QMouseEvent *event) override;
+    void wheelEvent(QWheelEvent *event) override;
 
 private slots:
     void onFileChanged(const QString &path);

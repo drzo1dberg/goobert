@@ -1,6 +1,8 @@
 #include "gridcell.h"
+#include "config.h"
 #include <QVBoxLayout>
 #include <QMouseEvent>
+#include <QWheelEvent>
 
 GridCell::GridCell(int row, int col, QWidget *parent)
     : QFrame(parent)
@@ -9,6 +11,7 @@ GridCell::GridCell(int row, int col, QWidget *parent)
 {
     setFrameStyle(QFrame::Box);
     setStyleSheet("GridCell { background-color: #0a0a0a; border: 1px solid #202020; }");
+    setMouseTracking(true);  // Enable mouse tracking for hover events
 
     auto *layout = new QVBoxLayout(this);
     layout->setContentsMargins(0, 0, 0, 0);
@@ -187,6 +190,34 @@ void GridCell::mouseDoubleClickEvent(QMouseEvent *event)
         emit doubleClicked(m_row, m_col);
     }
     QFrame::mouseDoubleClickEvent(event);
+}
+
+void GridCell::wheelEvent(QWheelEvent *event)
+{
+    Config &cfg = Config::instance();
+    int seekAmount = cfg.seekAmountSeconds();
+
+    int hdelta = event->angleDelta().x();
+    int vdelta = event->angleDelta().y();
+
+    // Horizontal scroll (side scroll): seek by configured amount
+    if (hdelta != 0) {
+        if (hdelta < 0) {
+            seekRelative(-seekAmount);
+        } else {
+            seekRelative(seekAmount);
+        }
+        event->accept();
+    }
+    // Vertical scroll: frame step
+    else if (vdelta != 0) {
+        if (vdelta < 0) {
+            frameStep();
+        } else {
+            frameBackStep();
+        }
+        event->accept();
+    }
 }
 
 void GridCell::onFileChanged(const QString &path)
