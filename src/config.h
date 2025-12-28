@@ -29,6 +29,9 @@ public:
     QString defaultMediaPath() const { return m_defaultMediaPath; }
     void setDefaultMediaPath(const QString &path) { m_defaultMediaPath = path; save(); }
 
+    QString screenshotPath() const { return m_screenshotPath; }
+    void setScreenshotPath(const QString &path) { m_screenshotPath = path; save(); }
+
     // Skipper settings
     bool skipperEnabled() const { return m_skipperEnabled; }
     void setSkipperEnabled(bool enabled) { m_skipperEnabled = enabled; save(); }
@@ -59,6 +62,7 @@ private:
 
     // Path
     QString m_defaultMediaPath;
+    QString m_screenshotPath;
 
     // Skipper
     bool m_skipperEnabled = true;

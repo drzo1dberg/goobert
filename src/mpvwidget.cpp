@@ -5,6 +5,10 @@
 #include <QMetaObject>
 #include <QDebug>
 #include <QTimer>
+#include <QFileInfo>
+#include <QDir>
+#include <QClipboard>
+#include <QApplication>
 #include <stdexcept>
 #include <clocale>
 #include <locale>
@@ -57,6 +61,9 @@ void MpvWidget::createMpv()
     mpv_set_option_string(m_mpv, "loop-file", QString::number(cfg.loopCount()).toUtf8().constData());
     mpv_set_option_string(m_mpv, "image-display-duration", QString::number(cfg.imageDisplayDuration()).toUtf8().constData());
     mpv_set_option_string(m_mpv, "volume", QString::number(cfg.defaultVolume()).toUtf8().constData());
+    mpv_set_option_string(m_mpv, "screenshot-directory", cfg.screenshotPath().toUtf8().constData());
+    mpv_set_option_string(m_mpv, "screenshot-template", "%f-%P");
+    mpv_set_option_string(m_mpv, "screenshot-format", "png");
 
     if (mpv_initialize(m_mpv) < 0)
         throw std::runtime_error("Failed to initialize mpv");
@@ -500,4 +507,37 @@ void MpvWidget::zoomOut()
 {
     double zoom = getProperty("video-zoom").toDouble();
     setProperty("video-zoom", zoom - 0.1);
+}
+
+// Screenshot
+void MpvWidget::screenshot()
+{
+    // Get screenshot directory from config
+    Config &cfg = Config::instance();
+    QString screenshotDir = cfg.screenshotPath();
+
+    // Use MPV's screenshot command (it will auto-number)
+    command(QVariantList{"screenshot"});
+
+    // Wait a bit for the file to be written, then find the newest screenshot
+    QTimer::singleShot(100, this, [screenshotDir]() {
+        QDir dir(screenshotDir);
+        if (!dir.exists()) return;
+
+        // Get all PNG files sorted by modification time
+        QFileInfoList files = dir.entryInfoList(QStringList() << "*.png" << "*.jpg",
+                                                QDir::Files,
+                                                QDir::Time);
+        if (!files.isEmpty()) {
+            QString newestFile = files.first().absoluteFilePath();
+
+            // Copy to clipboard
+            QClipboard *clipboard = QApplication::clipboard();
+            clipboard->setText(newestFile);
+
+            // Show message with full path
+            // We can't use command() here since we're in a lambda, so we'll just copy to clipboard
+            qDebug() << "Screenshot saved and copied to clipboard:" << newestFile;
+        }
+    });
 }

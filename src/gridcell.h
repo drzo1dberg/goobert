@@ -15,6 +15,7 @@ public:
     int col() const { return m_col; }
 
     void setPlaylist(const QStringList &files);
+    void setSelected(bool selected);
     void play();
     void stop();
     void pause();
@@ -45,6 +46,9 @@ public:
 
     // Seek
     void seekRelative(double seconds);
+
+    // Screenshot
+    void screenshot();
 
     // Playlist management
     void updatePlaylistPath(const QString &oldPath, const QString &newPath);

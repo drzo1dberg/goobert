@@ -22,6 +22,7 @@ set(SOURCES
     src/controlpanel.cpp
     src/filescanner.cpp
     src/config.cpp
+    src/keymap.cpp
 )
 
 set(HEADERS
@@ -32,6 +33,7 @@ set(HEADERS
     src/controlpanel.h
     src/filescanner.h
     src/config.h
+    src/keymap.h
 )
 
 # Executable

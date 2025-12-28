@@ -50,10 +50,12 @@ private slots:
     void zoomInSelected();
     void zoomOutSelected();
     void seekSelected(double seconds);
+    void screenshotSelected();
 
     void onCellSelected(int row, int col);
     void onCellDoubleClicked(int row, int col);
     void onFileRenamed(const QString &oldPath, const QString &newPath);
+    void navigateSelection(int colDelta, int rowDelta);
 
 private:
     void setupUi();
@@ -79,6 +81,7 @@ private:
     bool m_isFullscreen = false;
     bool m_isTileFullscreen = false;
     GridCell *m_fullscreenCell = nullptr;
+    GridCell *m_selectedCell = nullptr;
     int m_selectedRow = -1;
     int m_selectedCol = -1;
     int m_currentVolume = 30;  // Track current volume level

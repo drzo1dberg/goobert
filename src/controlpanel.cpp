@@ -71,6 +71,7 @@ void ControlPanel::setupUi()
     row1->addWidget(m_sourceEdit);
 
     auto *browseBtn = new QPushButton("...");
+    browseBtn->setFocusPolicy(Qt::NoFocus);
     connect(browseBtn, &QPushButton::clicked, this, [this]() {
         QString dir = QFileDialog::getExistingDirectory(this, "Select Media Directory", m_sourceEdit->text());
         if (!dir.isEmpty()) {
@@ -82,15 +83,18 @@ void ControlPanel::setupUi()
     row1->addSpacing(16);
 
     m_startBtn = new QPushButton("▶ Start");
+    m_startBtn->setFocusPolicy(Qt::NoFocus);
     connect(m_startBtn, &QPushButton::clicked, this, &ControlPanel::startClicked);
     row1->addWidget(m_startBtn);
 
     m_stopBtn = new QPushButton("■ Stop");
+    m_stopBtn->setFocusPolicy(Qt::NoFocus);
     m_stopBtn->setEnabled(false);
     connect(m_stopBtn, &QPushButton::clicked, this, &ControlPanel::stopClicked);
     row1->addWidget(m_stopBtn);
 
     m_fullscreenBtn = new QPushButton("⛶ Fullscreen");
+    m_fullscreenBtn->setFocusPolicy(Qt::NoFocus);
     connect(m_fullscreenBtn, &QPushButton::clicked, this, &ControlPanel::fullscreenClicked);
     row1->addWidget(m_fullscreenBtn);
 
@@ -98,22 +102,27 @@ void ControlPanel::setupUi()
 
     // Playback controls
     auto *prevBtn = new QPushButton("⏮");
+    prevBtn->setFocusPolicy(Qt::NoFocus);
     connect(prevBtn, &QPushButton::clicked, this, &ControlPanel::prevClicked);
     row1->addWidget(prevBtn);
 
     auto *playPauseBtn = new QPushButton("⏯");
+    playPauseBtn->setFocusPolicy(Qt::NoFocus);
     connect(playPauseBtn, &QPushButton::clicked, this, &ControlPanel::playPauseClicked);
     row1->addWidget(playPauseBtn);
 
     auto *nextBtn = new QPushButton("⏭");
+    nextBtn->setFocusPolicy(Qt::NoFocus);
     connect(nextBtn, &QPushButton::clicked, this, &ControlPanel::nextClicked);
     row1->addWidget(nextBtn);
 
     auto *shuffleBtn = new QPushButton("🔀");
+    shuffleBtn->setFocusPolicy(Qt::NoFocus);
     connect(shuffleBtn, &QPushButton::clicked, this, &ControlPanel::shuffleClicked);
     row1->addWidget(shuffleBtn);
 
     auto *muteBtn = new QPushButton("🔇");
+    muteBtn->setFocusPolicy(Qt::NoFocus);
     connect(muteBtn, &QPushButton::clicked, this, &ControlPanel::muteClicked);
     row1->addWidget(muteBtn);
 

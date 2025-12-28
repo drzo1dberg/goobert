@@ -34,6 +34,9 @@ void Config::load()
     QString defaultPath = QStandardPaths::writableLocation(QStandardPaths::MoviesLocation);
     m_defaultMediaPath = settings.value("paths/default_media_path", defaultPath).toString();
 
+    QString defaultScreenshotPath = QStandardPaths::writableLocation(QStandardPaths::PicturesLocation);
+    m_screenshotPath = settings.value("paths/screenshot_path", defaultScreenshotPath).toString();
+
     // Skipper
     m_skipperEnabled = settings.value("skipper/enabled", true).toBool();
     m_skipPercent = settings.value("skipper/skip_percent", 0.33).toDouble();
@@ -63,6 +66,7 @@ void Config::save()
 
     // Path
     settings.setValue("paths/default_media_path", m_defaultMediaPath);
+    settings.setValue("paths/screenshot_path", m_screenshotPath);
 
     // Skipper
     settings.setValue("skipper/enabled", m_skipperEnabled);

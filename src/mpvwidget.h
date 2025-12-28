@@ -60,6 +60,9 @@ public:
     void zoomIn();
     void zoomOut();
 
+    // Screenshot
+    void screenshot();
+
 signals:
     void fileChanged(const QString &path);
     void positionChanged(double pos);

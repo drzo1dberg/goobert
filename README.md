@@ -54,6 +54,7 @@
 - **Skipper Mode** - Auto-skip to configured percentage for video previews
 - **Loop Control** - Per-file or per-cell loop customization
 - **Video Transforms** - Rotation and zoom controls
+- **Screenshot Capture** - One-key screenshots with auto-copy to clipboard
 
 ### ⚙️ Configuration System
 - **INI-Based Settings** - Simple, human-readable configuration files
@@ -187,13 +188,14 @@ default_cols=3
 
 [paths]
 default_media_path=/mnt/media   # Your media directory
+screenshot_path=/mnt/screenshots # Screenshot save location
 
 [skipper]
 enabled=true                    # Auto-skip on file load
 skip_percent=0.33               # Skip to 33% of duration
 
 [seek]
-amount_seconds=30               # Seek by 30 seconds with side-scroll
+amount_seconds=30               # Seek by 30 seconds with V/C keys
 ```
 
 ### Copy Example Config
@@ -208,15 +210,41 @@ nano ~/.config/goobert/goobert.ini
 
 ## 🎮 Keyboard Shortcuts
 
+### Global Controls
 | Shortcut | Action |
 |----------|--------|
-| `F11` | Toggle global fullscreen |
+| `Space` / `P` | Play/Pause all cells |
+| `Shift+N` | Next all cells |
+| `Q` | Shuffle all playlists |
+| `M` | Mute all cells |
+| `U` | Volume up (+5%) |
+| `I` | Volume down (-5%) |
+| `F` / `F11` | Toggle fullscreen |
 | `Escape` | Exit fullscreen / Deselect cell |
-| `Double-Click` | Focus selected cell (tile fullscreen) |
+
+### Selected Cell Controls
+| Shortcut | Action |
+|----------|--------|
+| `W` / `A` / `S` / `D` | Navigate cell selection (up/left/down/right) |
+| `V` | Seek forward +5s |
+| `C` | Seek backward -5s |
+| `N` | Frame step forward |
+| `B` | Frame step backward |
+| `T` | Screenshot (auto-copy path to clipboard) |
+| `L` | Toggle loop on selected cell |
+| `R` | Rotate video 90° |
+| `+` / `-` | Zoom in/out |
+
+### Mouse Controls
+| Action | Effect |
+|--------|--------|
+| `Left Click` | Select cell |
+| `Double-Click` | Tile fullscreen (focus cell) |
+| `Right Click` | Toggle pause (no selection) |
+| `Middle Click` | Toggle loop (no selection) |
+| `Forward Button` | Next on cell (no selection) |
 | `Horizontal Scroll` | Seek ±30 seconds in selected cell |
 | `Vertical Scroll` | Frame step forward/backward |
-| `Middle Click` | Toggle loop-file on selected cell |
-| `Mouse Back Button` | Shuffle all → Next all |
 
 ---
 

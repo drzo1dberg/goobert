@@ -4,6 +4,7 @@
 #include <QStandardPaths>
 #include <iostream>
 #include "mainwindow.h"
+#include "config.h"
 
 int main(int argc, char *argv[])
 {
@@ -59,19 +60,27 @@ QString sourceDir;
 const QStringList args = parser.positionalArguments();
 
 if (!args.isEmpty()) {
+    // Command line argument takes priority
     sourceDir = args.first();
 } else {
-    QStringList defaultPaths = {
-        "/storage/media02/m02",
-        QStandardPaths::writableLocation(QStandardPaths::MoviesLocation),
-        QDir::homePath() + "/Videos",
-        QDir::homePath() + "/Movies"
-    };
+    // Try config file first, then fallbacks
+    Config &cfg = Config::instance();
+    QString configPath = cfg.defaultMediaPath();
 
-    for (const QString &path : defaultPaths) {
-        if (QDir(path).exists()) {
-            sourceDir = path;
-            break;
+    if (!configPath.isEmpty() && QDir(configPath).exists()) {
+        sourceDir = configPath;
+    } else {
+        QStringList defaultPaths = {
+            QStandardPaths::writableLocation(QStandardPaths::MoviesLocation),
+            QDir::homePath() + "/Videos",
+            QDir::homePath() + "/Movies"
+        };
+
+        for (const QString &path : defaultPaths) {
+            if (QDir(path).exists()) {
+                sourceDir = path;
+                break;
+            }
         }
     }
 }

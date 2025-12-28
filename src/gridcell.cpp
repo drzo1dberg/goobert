@@ -10,7 +10,8 @@ GridCell::GridCell(int row, int col, QWidget *parent)
     , m_col(col)
 {
     setFrameStyle(QFrame::Box);
-    setStyleSheet("GridCell { background-color: #0a0a0a; border: 1px solid #202020; }");
+    setObjectName("GridCell");
+    setStyleSheet("QFrame#GridCell { background-color: #0a0a0a; border: 1px solid #202020; }");
     setMouseTracking(true);  // Enable mouse tracking for hover events
 
     auto *layout = new QVBoxLayout(this);
@@ -40,6 +41,15 @@ GridCell::~GridCell()
 void GridCell::setPlaylist(const QStringList &files)
 {
     m_mpv->loadPlaylist(files);
+}
+
+void GridCell::setSelected(bool selected)
+{
+    if (selected) {
+        setStyleSheet("QFrame#GridCell { background-color: #0a0a0a; border: 2px solid rgba(74, 158, 255, 0.7); }");
+    } else {
+        setStyleSheet("QFrame#GridCell { background-color: #0a0a0a; border: 1px solid #202020; }");
+    }
 }
 
 void GridCell::play()
@@ -146,6 +156,11 @@ void GridCell::seekRelative(double seconds)
     m_mpv->seek(seconds);
 }
 
+void GridCell::screenshot()
+{
+    m_mpv->screenshot();
+}
+
 void GridCell::updatePlaylistPath(const QString &oldPath, const QString &newPath)
 {
     m_mpv->updatePlaylistPath(oldPath, newPath);
@@ -181,12 +196,17 @@ void GridCell::mousePressEvent(QMouseEvent *event)
     if (event->button() == Qt::LeftButton) {
         emit selected(m_row, m_col);
     } else if (event->button() == Qt::RightButton) {
-        // Right click: toggle pause on this cell
+        // Right click: toggle pause on this cell (no select)
         togglePause();
         event->accept();
         return;
+    } else if (event->button() == Qt::MiddleButton) {
+        // Middle click: toggle loop on this cell (no select)
+        toggleLoopFile();
+        event->accept();
+        return;
     } else if (event->button() == Qt::ForwardButton) {
-        // Mouse 4 (forward/thumb button): next on this cell only
+        // Mouse 4 (forward/thumb button): next on this cell only (no select)
         next();
         event->accept();
         return;
@@ -213,9 +233,9 @@ void GridCell::wheelEvent(QWheelEvent *event)
     // Horizontal scroll (side scroll): seek by configured amount
     if (hdelta != 0) {
         if (hdelta < 0) {
-            seekRelative(-seekAmount);
+            seekRelative(seekAmount);  // Scroll left -> forward
         } else {
-            seekRelative(seekAmount);
+            seekRelative(-seekAmount);  // Scroll right -> backward
         }
         event->accept();
     }

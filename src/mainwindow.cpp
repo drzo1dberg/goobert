@@ -1,6 +1,7 @@
 #include "mainwindow.h"
 #include "filescanner.h"
 #include "config.h"
+#include "keymap.h"
 #include <QKeyEvent>
 #include <QWheelEvent>
 #include <QMouseEvent>
@@ -45,32 +46,6 @@ void MainWindow::setupUi()
     // Wall container
     m_wallContainer = new QWidget(m_splitter);
     m_wallContainer->setStyleSheet("background-color: #0a0a0a;");
-    m_wallContainer->setToolTip(
-        "Keyboard Shortcuts:\n"
-        "\n"
-        "Global:\n"
-        "  Space/P - Pause/Play all\n"
-        "  ↑/↓ - Volume up/down (all)\n"
-        "  N - Next all\n"
-        "  S - Shuffle all\n"
-        "  X - Shuffle then next\n"
-        "  F11 - Toggle fullscreen\n"
-        "\n"
-        "Selected Cell:\n"
-        "  F - Fullscreen selected\n"
-        "  ←/→ - Seek -5s/+5s\n"
-        "  L - Toggle loop\n"
-        "  Z - Zoom in\n"
-        "  Shift+Z - Zoom out\n"
-        "  Ctrl+R - Rotate\n"
-        "\n"
-        "Mouse:\n"
-        "  Right Click - Pause cell\n"
-        "  Double Click - Fullscreen cell\n"
-        "  Middle Click - Toggle loop\n"
-        "  Scroll Wheel - Frame step\n"
-        "  Side Scroll - Seek ±30s"
-    );
     m_gridLayout = new QGridLayout(m_wallContainer);
     m_gridLayout->setContentsMargins(2, 2, 2, 2);
     m_gridLayout->setSpacing(2);
@@ -78,6 +53,8 @@ void MainWindow::setupUi()
     // Control panel
     m_controlPanel = new ControlPanel(m_sourceDir, m_splitter);
     m_controlPanel->installEventFilter(this);  // Capture keyboard events
+    // Set tooltip from KeyMap (automatically shows all bindings including duplicates)
+    m_controlPanel->setToolTip(KeyMap::instance().generateTooltip());
 
     m_splitter->addWidget(m_wallContainer);
     m_splitter->addWidget(m_controlPanel);
@@ -144,6 +121,11 @@ void MainWindow::startGrid()
 
     m_controlPanel->setRunning(true);
     m_controlPanel->log(QString("Started %1x%2 grid").arg(m_cols).arg(m_rows));
+
+    // Auto-select first cell
+    if (!m_cells.isEmpty()) {
+        onCellSelected(0, 0);
+    }
 }
 
 void MainWindow::stopGrid()
@@ -152,6 +134,9 @@ void MainWindow::stopGrid()
         cell->stop();
     }
     clearGrid();
+    m_selectedCell = nullptr;
+    m_selectedRow = -1;
+    m_selectedCol = -1;
     m_controlPanel->setRunning(false);
     m_controlPanel->log("Stopped");
 }
@@ -187,7 +172,7 @@ void MainWindow::clearGrid()
 
 bool MainWindow::eventFilter(QObject *watched, QEvent *event)
 {
-    // Intercept key presses for arrow keys, p, f from any child widget
+    // Intercept key presses for arrow keys, p, f, space from any child widget
     if (event->type() == QEvent::KeyPress) {
         QKeyEvent *keyEvent = static_cast<QKeyEvent*>(event);
         int key = keyEvent->key();
@@ -195,7 +180,9 @@ bool MainWindow::eventFilter(QObject *watched, QEvent *event)
         // Only handle specific keys that we want to intercept
         if (key == Qt::Key_Up || key == Qt::Key_Down ||
             key == Qt::Key_Left || key == Qt::Key_Right ||
-            key == Qt::Key_P || key == Qt::Key_F) {
+            key == Qt::Key_P || key == Qt::Key_F || key == Qt::Key_Space ||
+            key == Qt::Key_V || key == Qt::Key_C ||
+            key == Qt::Key_B || key == Qt::Key_N) {
 
             // Forward to our keyPressEvent
             keyPressEvent(keyEvent);
@@ -208,82 +195,91 @@ bool MainWindow::eventFilter(QObject *watched, QEvent *event)
 
 void MainWindow::keyPressEvent(QKeyEvent *event)
 {
-    Qt::KeyboardModifiers mods = event->modifiers();
+    // Get action from keymap
+    KeyMap::Action action = KeyMap::instance().getAction(event);
 
-    // Handle lowercase letters specifically
-    QString text = event->text().toLower();
-
-    switch (event->key()) {
-    case Qt::Key_F11:
+    // Execute action
+    switch (action) {
+    // Global actions
+    case KeyMap::PAUSE_ALL:
+        playPauseAll();
+        break;
+    case KeyMap::VOLUME_UP:
+        volumeUpAll();
+        break;
+    case KeyMap::VOLUME_DOWN:
+        volumeDownAll();
+        break;
+    case KeyMap::NEXT_ALL:
+        nextAllIfNotLooping();
+        break;
+    case KeyMap::SHUFFLE_ALL:
+        shuffleAll();
+        break;
+    case KeyMap::SHUFFLE_THEN_NEXT_ALL:
+        shuffleThenNextAll();
+        break;
+    case KeyMap::FULLSCREEN_GLOBAL:
         toggleFullscreen();
         break;
-    case Qt::Key_Escape:
+    case KeyMap::EXIT_FULLSCREEN:
         exitFullscreen();
         break;
 
-    // Grid controls
-    case Qt::Key_N:
-        nextAllIfNotLooping();
-        break;
-    case Qt::Key_S:
-        shuffleAll();
-        break;
-    case Qt::Key_X:
-        shuffleThenNextAll();
-        break;
-    case Qt::Key_Space:
-    case Qt::Key_P:
-        playPauseAll();
-        break;
-
-    // Volume controls (all cells)
-    case Qt::Key_Up:
-        volumeUpAll();
+    // Navigation
+    case KeyMap::NAVIGATE_UP:
+        navigateSelection(0, -1);
         event->accept();
         break;
-    case Qt::Key_Down:
-        volumeDownAll();
+    case KeyMap::NAVIGATE_DOWN:
+        navigateSelection(0, 1);
+        event->accept();
+        break;
+    case KeyMap::NAVIGATE_LEFT:
+        navigateSelection(-1, 0);
+        event->accept();
+        break;
+    case KeyMap::NAVIGATE_RIGHT:
+        navigateSelection(1, 0);
         event->accept();
         break;
 
-    // Fullscreen selected cell
-    case Qt::Key_F:
-        if (text == "f") {  // Only lowercase f
-            toggleTileFullscreen();
-        } else {
-            QMainWindow::keyPressEvent(event);
-        }
+    // Selected cell actions
+    case KeyMap::FULLSCREEN_SELECTED:
+        toggleTileFullscreen();
         break;
-
-    // Selected cell controls
-    case Qt::Key_R:
-        if (mods & Qt::ControlModifier) {
-            rotateSelected();
-        }
+    case KeyMap::SEEK_FORWARD:
+        seekSelected(5);  // V key: 5 seconds forward
         break;
-    case Qt::Key_Z:
-        if (mods & Qt::ShiftModifier) {
-            zoomOutSelected();
-        } else {
-            zoomInSelected();
-        }
+    case KeyMap::SEEK_BACKWARD:
+        seekSelected(-5);  // C key: 5 seconds backward
         break;
-    case Qt::Key_L:
+    case KeyMap::FRAME_STEP_FORWARD:
+        frameStepSelected();  // N key: one frame forward
+        break;
+    case KeyMap::FRAME_STEP_BACKWARD:
+        frameBackStepSelected();  // B key: one frame backward
+        break;
+    case KeyMap::TOGGLE_LOOP:
         toggleLoopSelected();
         break;
-
-    // Seek (selected cell)
-    case Qt::Key_Left:
-        seekSelected(-5);
-        event->accept();
+    case KeyMap::ZOOM_IN:
+        zoomInSelected();
         break;
-    case Qt::Key_Right:
-        seekSelected(5);
-        event->accept();
+    case KeyMap::ZOOM_OUT:
+        zoomOutSelected();
+        break;
+    case KeyMap::ROTATE:
+        rotateSelected();
+        break;
+    case KeyMap::SCREENSHOT:
+        screenshotSelected();
         break;
 
+    case KeyMap::NO_ACTION:
     default:
         QMainWindow::keyPressEvent(event);
+        break;
     }
 }
 
@@ -368,11 +364,19 @@ void MainWindow::exitTileFullscreen()
 
 void MainWindow::onCellSelected(int row, int col)
 {
+    // Deselect previous cell
+    if (m_selectedCell) {
+        m_selectedCell->setSelected(false);
+    }
+
     m_selectedRow = row;
     m_selectedCol = col;
 
     GridCell *cell = m_cellMap.value({row, col});
     if (cell) {
+        // Select new cell
+        cell->setSelected(true);
+        m_selectedCell = cell;
         m_controlPanel->setSelectedPath(cell->currentFile());
     }
 }
@@ -382,6 +386,8 @@ void MainWindow::onCellDoubleClicked(int row, int col)
     if (m_isTileFullscreen) {
         exitTileFullscreen();
     } else {
+        // Select the cell first (like F does)
+        onCellSelected(row, col);
         enterTileFullscreen(row, col);
     }
 }
@@ -473,7 +479,7 @@ void MainWindow::shuffleThenNextAll()
 
 GridCell* MainWindow::selectedCell() const
 {
-    return m_cellMap.value({m_selectedRow, m_selectedCol}, nullptr);
+    return m_selectedCell;
 }
 
 void MainWindow::toggleLoopSelected()
@@ -525,6 +531,13 @@ void MainWindow::seekSelected(double seconds)
     }
 }
 
+void MainWindow::screenshotSelected()
+{
+    if (GridCell *cell = selectedCell()) {
+        cell->screenshot();
+    }
+}
+
 void MainWindow::wheelEvent(QWheelEvent *event)
 {
     int hdelta = event->angleDelta().x();
@@ -536,9 +549,9 @@ void MainWindow::wheelEvent(QWheelEvent *event)
     // Horizontal scroll (side scroll on MX Master): seek by configured amount
     if (hdelta != 0) {
         if (hdelta < 0) {
-            seekSelected(-seekAmount);
+            seekSelected(seekAmount);  // Scroll left -> forward
         } else {
-            seekSelected(seekAmount);
+            seekSelected(-seekAmount);  // Scroll right -> backward
         }
     }
     // Vertical scroll: frame step
@@ -555,11 +568,7 @@ void MainWindow::wheelEvent(QWheelEvent *event)
 
 void MainWindow::mousePressEvent(QMouseEvent *event)
 {
-    if (event->button() == Qt::MiddleButton) {
-        // MBTN_MID: toggle loop on selected cell
-        toggleLoopSelected();
-        event->accept();
-    } else if (event->button() == Qt::BackButton) {
+    if (event->button() == Qt::BackButton) {
         // MBTN_BACK: chained shuffle + next
         shuffleThenNextAll();
         event->accept();
@@ -574,4 +583,29 @@ void MainWindow::onFileRenamed(const QString &oldPath, const QString &newPath)
     for (GridCell *cell : m_cells) {
         cell->updatePlaylistPath(oldPath, newPath);
     }
+}
+
+void MainWindow::navigateSelection(int colDelta, int rowDelta)
+{
+    // Don't navigate if no cells
+    if (m_cells.isEmpty()) return;
+
+    // If nothing selected, select first cell
+    if (m_selectedRow < 0 || m_selectedCol < 0) {
+        onCellSelected(0, 0);
+        return;
+    }
+
+    // Calculate new position
+    int newCol = m_selectedCol + colDelta;
+    int newRow = m_selectedRow + rowDelta;
+
+    // Wrap around or clamp
+    if (newCol < 0) newCol = m_cols - 1;
+    if (newCol >= m_cols) newCol = 0;
+    if (newRow < 0) newRow = m_rows - 1;
+    if (newRow >= m_rows) newRow = 0;
+
+    // Select new cell
+    onCellSelected(newRow, newCol);
 }
