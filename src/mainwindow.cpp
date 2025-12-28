@@ -51,7 +51,13 @@ void MainWindow::setupUi()
 
     m_splitter->addWidget(m_wallContainer);
     m_splitter->addWidget(m_controlPanel);
-    m_splitter->setSizes({700, 200});
+
+    // Set stretch factors: video wall gets 9x more space than controls
+    m_splitter->setStretchFactor(0, 9);  // Wall
+    m_splitter->setStretchFactor(1, 1);  // Controls
+
+    // Initial sizes: give wall 90% of space
+    m_splitter->setSizes({900, 100});
 
     // Connect control panel signals
     connect(m_controlPanel, &ControlPanel::startClicked, this, &MainWindow::startGrid);

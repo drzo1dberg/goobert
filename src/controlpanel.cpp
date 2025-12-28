@@ -129,7 +129,8 @@ void ControlPanel::setupUi()
     m_monitor->horizontalHeader()->setSectionResizeMode(1, QHeaderView::Fixed);
     m_monitor->setColumnWidth(1, 200);
     m_monitor->setSelectionBehavior(QAbstractItemView::SelectRows);
-    m_monitor->setMaximumHeight(120);
+    m_monitor->setMaximumHeight(80);  // Smaller to give more space to video wall
+    m_monitor->setVerticalScrollBarPolicy(Qt::ScrollBarAsNeeded);
     mainLayout->addWidget(m_monitor);
 
     // Row 3: Status bar
