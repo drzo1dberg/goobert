@@ -46,6 +46,9 @@ public:
     // Seek
     void seekRelative(double seconds);
 
+    // Playlist management
+    void updatePlaylistPath(const QString &oldPath, const QString &newPath);
+
     QString currentFile() const;
     double position() const;
     double duration() const;

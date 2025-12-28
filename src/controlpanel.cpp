@@ -6,6 +6,13 @@
 #include <QHeaderView>
 #include <QDateTime>
 #include <QFileInfo>
+#include <QMenu>
+#include <QInputDialog>
+#include <QMessageBox>
+#include <QFile>
+#include <QDir>
+#include <QClipboard>
+#include <QApplication>
 
 ControlPanel::ControlPanel(const QString &sourceDir, QWidget *parent)
     : QWidget(parent)
@@ -129,9 +136,12 @@ void ControlPanel::setupUi()
     m_monitor->horizontalHeader()->setSectionResizeMode(1, QHeaderView::Fixed);
     m_monitor->setColumnWidth(1, 200);
     m_monitor->setSelectionBehavior(QAbstractItemView::SelectRows);
-    m_monitor->setMaximumHeight(80);  // Smaller to give more space to video wall
+    m_monitor->setEditTriggers(QAbstractItemView::NoEditTriggers);  // Disable editing
+    m_monitor->setMinimumHeight(80);  // Minimum height, but can grow
     m_monitor->setVerticalScrollBarPolicy(Qt::ScrollBarAsNeeded);
-    mainLayout->addWidget(m_monitor);
+    m_monitor->setContextMenuPolicy(Qt::CustomContextMenu);
+    connect(m_monitor, &QWidget::customContextMenuRequested, this, &ControlPanel::onTableContextMenu);
+    mainLayout->addWidget(m_monitor, 1);  // stretch factor 1 so it grows
 
     // Row 3: Status bar
     auto *row3 = new QHBoxLayout();
@@ -217,7 +227,10 @@ void ControlPanel::updateCellStatus(int row, int col, const QString &path, doubl
 
     QFileInfo fi(path);
     m_monitor->item(tableRow, 1)->setText(status);
-    m_monitor->item(tableRow, 2)->setText(fi.fileName());
+
+    QTableWidgetItem *fileItem = m_monitor->item(tableRow, 2);
+    fileItem->setText(fi.fileName());
+    fileItem->setData(Qt::UserRole, path);  // Store full path for renaming
 }
 
 QString ControlPanel::formatTime(double seconds) const
@@ -231,4 +244,85 @@ QString ControlPanel::formatTime(double seconds) const
         return QString("%1:%2:%3").arg(h).arg(m, 2, 10, QChar('0')).arg(sec, 2, 10, QChar('0'));
     }
     return QString("%1:%2").arg(m, 2, 10, QChar('0')).arg(sec, 2, 10, QChar('0'));
+}
+
+void ControlPanel::onTableContextMenu(const QPoint &pos)
+{
+    QTableWidgetItem *item = m_monitor->itemAt(pos);
+    if (!item) return;
+
+    int row = item->row();
+
+    // Get cell ID from first column
+    QTableWidgetItem *cellItem = m_monitor->item(row, 0);
+    if (!cellItem) return;
+
+    QString cellId = cellItem->text();
+    QStringList parts = cellId.split(",");
+    if (parts.size() != 2) return;
+
+    int cellRow = parts[0].toInt();
+    int cellCol = parts[1].toInt();
+
+    // Get file path from third column
+    QTableWidgetItem *fileItem = m_monitor->item(row, 2);
+    if (!fileItem) return;
+
+    QString fileName = fileItem->text();
+
+    // Need to get full path - we'll need to store it or reconstruct it
+    // For now, we'll use the data role to store the full path
+    QString fullPath = fileItem->data(Qt::UserRole).toString();
+    if (fullPath.isEmpty()) return;
+
+    QMenu menu(this);
+    QAction *copyPathAction = menu.addAction("Copy path");
+    QAction *renameAction = menu.addAction("Rename file...");
+
+    QAction *selected = menu.exec(m_monitor->viewport()->mapToGlobal(pos));
+    if (selected == copyPathAction) {
+        QApplication::clipboard()->setText(fullPath);
+        log("Copied path to clipboard");
+    } else if (selected == renameAction) {
+        renameFile(cellRow, cellCol, fullPath);
+    }
+}
+
+void ControlPanel::renameFile(int row, int col, const QString &currentPath)
+{
+    QFileInfo fileInfo(currentPath);
+    if (!fileInfo.exists()) {
+        QMessageBox::warning(this, "Error", "File does not exist: " + currentPath);
+        return;
+    }
+
+    QString oldName = fileInfo.fileName();
+    QString extension = fileInfo.suffix();
+    QString baseName = fileInfo.completeBaseName();
+
+    bool ok;
+    QString newBaseName = QInputDialog::getText(this, "Rename File",
+                                                 "New name (without extension):",
+                                                 QLineEdit::Normal,
+                                                 baseName, &ok);
+
+    if (!ok || newBaseName.isEmpty() || newBaseName == baseName) {
+        return;
+    }
+
+    QString newFileName = extension.isEmpty() ? newBaseName : newBaseName + "." + extension;
+    QString newPath = fileInfo.absolutePath() + "/" + newFileName;
+
+    if (QFile::exists(newPath)) {
+        QMessageBox::warning(this, "Error", "A file with that name already exists.");
+        return;
+    }
+
+    if (!QFile::rename(currentPath, newPath)) {
+        QMessageBox::warning(this, "Error", "Failed to rename file.");
+        return;
+    }
+
+    log(QString("Renamed: %1 → %2").arg(oldName, newFileName));
+    emit fileRenamed(currentPath, newPath);
 }

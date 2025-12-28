@@ -146,6 +146,16 @@ void GridCell::seekRelative(double seconds)
     m_mpv->seek(seconds);
 }
 
+void GridCell::updatePlaylistPath(const QString &oldPath, const QString &newPath)
+{
+    m_mpv->updatePlaylistPath(oldPath, newPath);
+
+    // Update current file reference if it matches
+    if (m_currentFile == oldPath) {
+        m_currentFile = newPath;
+    }
+}
+
 QString GridCell::currentFile() const
 {
     return m_currentFile;

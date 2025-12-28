@@ -15,6 +15,9 @@ MainWindow::MainWindow(const QString &sourceDir, QWidget *parent)
     : QMainWindow(parent)
     , m_sourceDir(sourceDir)
 {
+    Config &cfg = Config::instance();
+    m_currentVolume = cfg.defaultVolume();
+
     setWindowTitle(QString("Goobert %1").arg(GOOBERT_VERSION));
     resize(1500, 900);
 
@@ -42,12 +45,39 @@ void MainWindow::setupUi()
     // Wall container
     m_wallContainer = new QWidget(m_splitter);
     m_wallContainer->setStyleSheet("background-color: #0a0a0a;");
+    m_wallContainer->setToolTip(
+        "Keyboard Shortcuts:\n"
+        "\n"
+        "Global:\n"
+        "  Space/P - Pause/Play all\n"
+        "  ↑/↓ - Volume up/down (all)\n"
+        "  N - Next all\n"
+        "  S - Shuffle all\n"
+        "  X - Shuffle then next\n"
+        "  F11 - Toggle fullscreen\n"
+        "\n"
+        "Selected Cell:\n"
+        "  F - Fullscreen selected\n"
+        "  ←/→ - Seek -5s/+5s\n"
+        "  L - Toggle loop\n"
+        "  Z - Zoom in\n"
+        "  Shift+Z - Zoom out\n"
+        "  Ctrl+R - Rotate\n"
+        "\n"
+        "Mouse:\n"
+        "  Right Click - Pause cell\n"
+        "  Double Click - Fullscreen cell\n"
+        "  Middle Click - Toggle loop\n"
+        "  Scroll Wheel - Frame step\n"
+        "  Side Scroll - Seek ±30s"
+    );
     m_gridLayout = new QGridLayout(m_wallContainer);
     m_gridLayout->setContentsMargins(2, 2, 2, 2);
     m_gridLayout->setSpacing(2);
 
     // Control panel
     m_controlPanel = new ControlPanel(m_sourceDir, m_splitter);
+    m_controlPanel->installEventFilter(this);  // Capture keyboard events
 
     m_splitter->addWidget(m_wallContainer);
     m_splitter->addWidget(m_controlPanel);
@@ -69,6 +99,7 @@ void MainWindow::setupUi()
     connect(m_controlPanel, &ControlPanel::shuffleClicked, this, &MainWindow::shuffleAll);
     connect(m_controlPanel, &ControlPanel::muteClicked, this, &MainWindow::muteAll);
     connect(m_controlPanel, &ControlPanel::volumeChanged, this, &MainWindow::setVolumeAll);
+    connect(m_controlPanel, &ControlPanel::fileRenamed, this, &MainWindow::onFileRenamed);
     connect(m_controlPanel, &ControlPanel::gridSizeChanged, this, [this](int rows, int cols) {
         m_rows = rows;
         m_cols = cols;
@@ -154,9 +185,33 @@ void MainWindow::clearGrid()
     m_cellMap.clear();
 }
 
+bool MainWindow::eventFilter(QObject *watched, QEvent *event)
+{
+    // Intercept key presses for arrow keys, p, f from any child widget
+    if (event->type() == QEvent::KeyPress) {
+        QKeyEvent *keyEvent = static_cast<QKeyEvent*>(event);
+        int key = keyEvent->key();
+
+        // Only handle specific keys that we want to intercept
+        if (key == Qt::Key_Up || key == Qt::Key_Down ||
+            key == Qt::Key_Left || key == Qt::Key_Right ||
+            key == Qt::Key_P || key == Qt::Key_F) {
+
+            // Forward to our keyPressEvent
+            keyPressEvent(keyEvent);
+            return true;  // Event handled
+        }
+    }
+
+    return QMainWindow::eventFilter(watched, event);
+}
+
 void MainWindow::keyPressEvent(QKeyEvent *event)
 {
     Qt::KeyboardModifiers mods = event->modifiers();
+
+    // Handle lowercase letters specifically
+    QString text = event->text().toLower();
 
     switch (event->key()) {
     case Qt::Key_F11:
@@ -177,7 +232,27 @@ void MainWindow::keyPressEvent(QKeyEvent *event)
         shuffleThenNextAll();
         break;
     case Qt::Key_Space:
+    case Qt::Key_P:
         playPauseAll();
+        break;
+
+    // Volume controls (all cells)
+    case Qt::Key_Up:
+        volumeUpAll();
+        event->accept();
+        break;
+    case Qt::Key_Down:
+        volumeDownAll();
+        event->accept();
+        break;
+
+    // Fullscreen selected cell
+    case Qt::Key_F:
+        if (text == "f") {  // Only lowercase f
+            toggleTileFullscreen();
+        } else {
+            QMainWindow::keyPressEvent(event);
+        }
         break;
 
     // Selected cell controls
@@ -197,12 +272,14 @@ void MainWindow::keyPressEvent(QKeyEvent *event)
         toggleLoopSelected();
         break;
 
-    // Seek
+    // Seek (selected cell)
     case Qt::Key_Left:
         seekSelected(-5);
+        event->accept();
         break;
     case Qt::Key_Right:
         seekSelected(5);
+        event->accept();
         break;
 
     default:
@@ -346,8 +423,35 @@ void MainWindow::muteAll()
 
 void MainWindow::setVolumeAll(int volume)
 {
+    m_currentVolume = volume;
     for (GridCell *cell : m_cells) {
         cell->setVolume(volume);
+    }
+}
+
+void MainWindow::volumeUpAll()
+{
+    m_currentVolume = qMin(100, m_currentVolume + 5);
+    setVolumeAll(m_currentVolume);
+    m_controlPanel->log(QString("Volume: %1%").arg(m_currentVolume));
+}
+
+void MainWindow::volumeDownAll()
+{
+    m_currentVolume = qMax(0, m_currentVolume - 5);
+    setVolumeAll(m_currentVolume);
+    m_controlPanel->log(QString("Volume: %1%").arg(m_currentVolume));
+}
+
+void MainWindow::toggleTileFullscreen()
+{
+    if (m_isTileFullscreen) {
+        exitTileFullscreen();
+    } else {
+        // Fullscreen the selected cell
+        if (m_selectedRow >= 0 && m_selectedCol >= 0) {
+            enterTileFullscreen(m_selectedRow, m_selectedCol);
+        }
     }
 }
 
@@ -461,5 +565,13 @@ void MainWindow::mousePressEvent(QMouseEvent *event)
         event->accept();
     } else {
         QMainWindow::mousePressEvent(event);
+    }
+}
+
+void MainWindow::onFileRenamed(const QString &oldPath, const QString &newPath)
+{
+    // Update all cells' playlists
+    for (GridCell *cell : m_cells) {
+        cell->updatePlaylistPath(oldPath, newPath);
     }
 }

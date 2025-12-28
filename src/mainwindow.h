@@ -22,6 +22,7 @@ protected:
     void keyPressEvent(QKeyEvent *event) override;
     void wheelEvent(QWheelEvent *event) override;
     void mousePressEvent(QMouseEvent *event) override;
+    bool eventFilter(QObject *watched, QEvent *event) override;
 
 private slots:
     void startGrid();
@@ -37,6 +38,9 @@ private slots:
     void shuffleThenNextAll();   // Chained: shuffle, delay, next
     void muteAll();
     void setVolumeAll(int volume);
+    void volumeUpAll();
+    void volumeDownAll();
+    void toggleTileFullscreen();
 
     // Selected cell actions
     void toggleLoopSelected();
@@ -49,6 +53,7 @@ private slots:
 
     void onCellSelected(int row, int col);
     void onCellDoubleClicked(int row, int col);
+    void onFileRenamed(const QString &oldPath, const QString &newPath);
 
 private:
     void setupUi();
@@ -76,4 +81,5 @@ private:
     GridCell *m_fullscreenCell = nullptr;
     int m_selectedRow = -1;
     int m_selectedCol = -1;
+    int m_currentVolume = 30;  // Track current volume level
 };

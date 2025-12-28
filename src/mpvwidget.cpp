@@ -322,10 +322,33 @@ void MpvWidget::loadPlaylist(const QStringList &files)
     }
 
     qDebug() << "Loading playlist with" << files.size() << "files";
+    m_currentPlaylist = files;  // Store for rename support
     loadFile(files.first());
     for (int i = 1; i < files.size(); ++i) {
         command(QVariantList{"loadfile", files[i], "append"});
     }
+}
+
+void MpvWidget::updatePlaylistPath(const QString &oldPath, const QString &newPath)
+{
+    // Update in current playlist
+    for (int i = 0; i < m_currentPlaylist.size(); ++i) {
+        if (m_currentPlaylist[i] == oldPath) {
+            m_currentPlaylist[i] = newPath;
+            qDebug() << "Updated playlist entry:" << oldPath << "->" << newPath;
+        }
+    }
+
+    // Update pending playlist if not yet initialized
+    for (int i = 0; i < m_pendingPlaylist.size(); ++i) {
+        if (m_pendingPlaylist[i] == oldPath) {
+            m_pendingPlaylist[i] = newPath;
+        }
+    }
+
+    // Note: mpv's internal playlist already has file handles open,
+    // so we don't need to update it. The rename will work for future
+    // navigation since we store our own playlist copy.
 }
 
 void MpvWidget::play()

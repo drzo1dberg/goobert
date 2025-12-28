@@ -20,6 +20,7 @@ public:
 
     void loadFile(const QString &file);
     void loadPlaylist(const QStringList &files);
+    void updatePlaylistPath(const QString &oldPath, const QString &newPath);
     void play();
     void pause();
     void stop();
@@ -89,6 +90,7 @@ private:
     bool m_initialized = false;
     QList<QVariantList> m_pendingCommands;
     QStringList m_pendingPlaylist;
+    QStringList m_currentPlaylist;  // Store current playlist for rename support
 
     // Skipper state
     double m_skipPercent = 0.33;

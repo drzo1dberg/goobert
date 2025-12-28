@@ -35,10 +35,15 @@ signals:
     void muteClicked();
     void volumeChanged(int volume);
     void gridSizeChanged(int rows, int cols);
+    void fileRenamed(const QString &oldPath, const QString &newPath);
+
+private slots:
+    void onTableContextMenu(const QPoint &pos);
 
 private:
     void setupUi();
     QString formatTime(double seconds) const;
+    void renameFile(int row, int col, const QString &currentPath);
 
     QLineEdit *m_sourceEdit;
     QSpinBox *m_colsSpin;
