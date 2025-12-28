@@ -48,8 +48,15 @@ void MpvWidget::createMpv()
     mpv_set_option_string(m_mpv, "terminal", "no");
     mpv_set_option_string(m_mpv, "msg-level", "all=no");
     mpv_set_option_string(m_mpv, "vo", "libmpv");
-    mpv_set_option_string(m_mpv, "hwdec", "no");
     mpv_set_option_string(m_mpv, "keep-open", "no");
+
+    // High-quality playback settings
+    mpv_set_option_string(m_mpv, "hwdec", "auto-safe");      // GPU decoding when available
+    mpv_set_option_string(m_mpv, "profile", "gpu-hq");       // High-quality GPU rendering
+    mpv_set_option_string(m_mpv, "scale", "ewa_lanczos");    // Best upscaling algorithm
+    mpv_set_option_string(m_mpv, "cscale", "ewa_lanczos");   // Chroma upscaling
+    mpv_set_option_string(m_mpv, "dscale", "mitchell");      // Downscaling
+    mpv_set_option_string(m_mpv, "video-sync", "display-resample");  // Smooth playback
     mpv_set_option_string(m_mpv, "idle", "yes");
     mpv_set_option_string(m_mpv, "input-default-bindings", "no");
     mpv_set_option_string(m_mpv, "input-vo-keyboard", "no");
