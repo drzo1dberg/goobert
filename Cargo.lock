@@ -1566,7 +1566,7 @@ dependencies = [
  "egui_glow",
  "env_logger",
  "glow 0.14.2",
- "libmpv",
+ "libmpv2",
  "log",
  "rand 0.8.5",
  "rfd",
@@ -1952,19 +1952,19 @@ dependencies = [
 ]
 
 [[package]]
-name = "libmpv"
-version = "2.0.1"
+name = "libmpv2"
+version = "5.0.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "61a58e2d19b34775e81e0fdca194b3b8ee8de973b092e7582b416343979e22e7"
+checksum = "c7e1332580763b34391000d3081990ebae806cea1d9d37cf2a4b12962abef248"
 dependencies = [
- "libmpv-sys",
+ "libmpv2-sys",
 ]
 
 [[package]]
-name = "libmpv-sys"
-version = "3.1.0"
+name = "libmpv2-sys"
+version = "4.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0df938d3145cd8f134572721a27afa3a51f9bc1c26ae30a1d5077162f96d074b"
+checksum = "42124ba90561beede41d5e6ef64eef63fc1395cf83217e3dd1157294f7dcdb56"
 
 [[package]]
 name = "libredox"

@@ -13,7 +13,7 @@ egui = "0.29"
 egui_glow = "0.29"
 
 # Video playback
-libmpv = "2.0"
+libmpv2 = "5.0"
 
 # OpenGL
 glow = "0.14"

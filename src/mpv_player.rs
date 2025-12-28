@@ -1,5 +1,5 @@
 use anyhow::{anyhow, Result};
-use libmpv::{events::Event, Mpv};
+use libmpv2::{events::Event, Mpv};
 use std::collections::HashSet;
 use std::path::Path;
 
@@ -237,16 +237,13 @@ impl MpvPlayer {
         let mut file_loaded = false;
         let mut file_ended = false;
 
-        {
-            let mut event_ctx = self.mpv.create_event_context();
-            loop {
-                match event_ctx.wait_event(0.0) {
-                    Some(Ok(Event::FileLoaded)) => file_loaded = true,
-                    Some(Ok(Event::EndFile(_))) => file_ended = true,
-                    Some(Err(e)) => log::warn!("MPV event error: {:?}", e),
-                    None => break,
-                    _ => {}
-                }
+        loop {
+            match self.mpv.wait_event(0.0) {
+                Some(Ok(Event::FileLoaded)) => file_loaded = true,
+                Some(Ok(Event::EndFile(_))) => file_ended = true,
+                Some(Err(e)) => log::warn!("MPV event error: {:?}", e),
+                None => break,
+                _ => {}
             }
         }
 
