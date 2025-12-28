@@ -85,8 +85,9 @@ impl MpvPlayer {
             };
         }
 
-        // Configure MPV options - note: no video output yet, will use render API
+        // Configure MPV options - use render API only, no window
         set_prop!("terminal", false);
+        set_prop!("vo", "libmpv");  // Critical: render via API only, no window
         set_prop!("keep-open", "yes");
         set_prop!("idle", true);
         set_prop!("input-default-bindings", false);

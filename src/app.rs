@@ -405,25 +405,31 @@ impl GoobertApp {
         }
     }
 
-    fn render_videos(&mut self) {
+    fn render_videos(&mut self, ctx: &egui::Context) {
         if !self.render_initialized || self.cells.is_empty() {
             return;
         }
 
-        let renderer = match &self.video_renderer {
+        let renderer = match &mut self.video_renderer {
             Some(r) => r,
             None => return,
         };
 
-        // Render each cell's video to its FBO
-        for (index, cell) in self.cells.iter_mut().enumerate() {
-            if let Some(fbo_id) = renderer.get_fbo_id(index) {
-                if let Some(fbo) = renderer.get_fbo(index) {
-                    // Render MPV frame to the FBO
-                    if cell.render(fbo_id, fbo.width as i32, fbo.height as i32) {
+        // Render each cell's video to its FBO and update egui texture
+        for index in 0..self.cells.len() {
+            let fbo_id = renderer.get_fbo_id(index);
+            let fbo_size = renderer.get_fbo(index).map(|f| (f.width, f.height));
+
+            if let (Some(fbo_id), Some((width, height))) = (fbo_id, fbo_size) {
+                // Render MPV frame to the FBO
+                if let Some(cell) = self.cells.get_mut(index) {
+                    if cell.render(fbo_id, width as i32, height as i32) {
                         cell.report_swap();
                     }
                 }
+
+                // Update egui texture from FBO
+                renderer.update_egui_texture(index, ctx);
             }
         }
 
@@ -438,7 +444,7 @@ impl eframe::App for GoobertApp {
         let now = Instant::now();
         if now.duration_since(self.last_update) > Duration::from_millis(16) {
             self.update_cells();
-            self.render_videos();
+            self.render_videos(ctx);
             self.last_update = now;
         }
 
@@ -538,14 +544,13 @@ impl GoobertApp {
                         let cell_index = row * cols + col;
                         if let Some(renderer) = &self.video_renderer {
                             if let Some(texture_id) = renderer.get_texture_id(cell_index) {
-                                let uv = egui::Rect::from_min_max(
-                                    egui::pos2(0.0, 1.0),
-                                    egui::pos2(1.0, 0.0),
-                                );
                                 ui.painter().image(
                                     texture_id,
                                     rect,
-                                    uv,
+                                    egui::Rect::from_min_max(
+                                        egui::pos2(0.0, 0.0),
+                                        egui::pos2(1.0, 1.0),
+                                    ),
                                     egui::Color32::WHITE,
                                 );
                             }

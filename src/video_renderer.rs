@@ -1,17 +1,19 @@
+use egui::{ColorImage, TextureHandle, TextureOptions};
 use glow::HasContext;
 use std::sync::Arc;
 
-/// Manages video frame buffers for rendering MPV output to egui textures
+/// Manages video frame buffers for rendering MPV output
 pub struct VideoRenderer {
     gl: Arc<glow::Context>,
     fbos: Vec<FrameBuffer>,
+    textures: Vec<Option<TextureHandle>>,
+    pixel_buffer: Vec<u8>,
 }
 
 /// A framebuffer with associated texture for video rendering
 pub struct FrameBuffer {
     pub fbo: glow::Framebuffer,
     pub texture: glow::Texture,
-    pub texture_id: egui::TextureId,
     pub width: u32,
     pub height: u32,
 }
@@ -21,6 +23,8 @@ impl VideoRenderer {
         Self {
             gl,
             fbos: Vec::new(),
+            textures: Vec::new(),
+            pixel_buffer: Vec::new(),
         }
     }
 
@@ -32,8 +36,12 @@ impl VideoRenderer {
         for _ in 0..count {
             if let Some(fb) = self.create_fbo(width, height) {
                 self.fbos.push(fb);
+                self.textures.push(None);
             }
         }
+
+        // Allocate pixel buffer for reading
+        self.pixel_buffer = vec![0u8; (width * height * 4) as usize];
 
         log::info!("Created {} FBOs at {}x{}", self.fbos.len(), width, height);
     }
@@ -95,18 +103,17 @@ impl VideoRenderer {
                 return None;
             }
 
+            // Clear the FBO to dark gray initially
+            self.gl.clear_color(0.1, 0.1, 0.1, 1.0);
+            self.gl.clear(glow::COLOR_BUFFER_BIT);
+
             // Unbind
             self.gl.bind_framebuffer(glow::FRAMEBUFFER, None);
             self.gl.bind_texture(glow::TEXTURE_2D, None);
 
-            // Get the native texture handle for egui
-            let native_texture = glow::NativeTexture(texture.0);
-            let texture_id = egui::TextureId::User(native_texture.0.get() as u64);
-
             Some(FrameBuffer {
                 fbo,
                 texture,
-                texture_id,
                 width,
                 height,
             })
@@ -123,20 +130,58 @@ impl VideoRenderer {
         self.fbos.get(index).map(|fb| fb.fbo.0.get() as i32)
     }
 
-    /// Get the egui texture ID for a cell
-    pub fn get_texture_id(&self, index: usize) -> Option<egui::TextureId> {
-        self.fbos.get(index).map(|fb| fb.texture_id)
+    /// Read pixels from FBO and update egui texture
+    pub fn update_egui_texture(&mut self, index: usize, ctx: &egui::Context) {
+        let fbo = match self.fbos.get(index) {
+            Some(fb) => fb,
+            None => return,
+        };
+
+        let width = fbo.width as usize;
+        let height = fbo.height as usize;
+
+        // Read pixels from FBO
+        unsafe {
+            self.gl.bind_framebuffer(glow::READ_FRAMEBUFFER, Some(fbo.fbo));
+            self.gl.read_pixels(
+                0, 0,
+                width as i32, height as i32,
+                glow::RGBA,
+                glow::UNSIGNED_BYTE,
+                glow::PixelPackData::Slice(&mut self.pixel_buffer),
+            );
+            self.gl.bind_framebuffer(glow::READ_FRAMEBUFFER, None);
+        }
+
+        // Flip the image vertically (OpenGL has origin at bottom-left)
+        let row_size = width * 4;
+        let mut flipped = vec![0u8; self.pixel_buffer.len()];
+        for y in 0..height {
+            let src_start = y * row_size;
+            let dst_start = (height - 1 - y) * row_size;
+            flipped[dst_start..dst_start + row_size]
+                .copy_from_slice(&self.pixel_buffer[src_start..src_start + row_size]);
+        }
+
+        // Create egui image
+        let image = ColorImage::from_rgba_unmultiplied([width, height], &flipped);
+
+        // Update or create texture
+        if let Some(Some(handle)) = self.textures.get_mut(index) {
+            handle.set(image, TextureOptions::LINEAR);
+        } else if index < self.textures.len() {
+            let handle = ctx.load_texture(
+                format!("video_{}", index),
+                image,
+                TextureOptions::LINEAR,
+            );
+            self.textures[index] = Some(handle);
+        }
     }
 
-    /// Resize FBOs to a new size
-    pub fn resize(&mut self, width: u32, height: u32) {
-        let count = self.fbos.len();
-        if count > 0 {
-            let first = &self.fbos[0];
-            if first.width != width || first.height != height {
-                self.create_fbos(count, width, height);
-            }
-        }
+    /// Get egui texture ID for a cell
+    pub fn get_texture_id(&self, index: usize) -> Option<egui::TextureId> {
+        self.textures.get(index)?.as_ref().map(|h| h.id())
     }
 
     /// Clean up all FBOs
@@ -148,6 +193,7 @@ impl VideoRenderer {
             }
         }
         self.fbos.clear();
+        self.textures.clear();
     }
 
     /// Bind the default framebuffer
