@@ -90,8 +90,8 @@
 sudo apt install build-essential cmake qt6-base-dev qt6-opengl-dev libmpv-dev pkg-config
 
 # Clone and build
-git clone https://github.com/yourusername/goobert-cpp.git
-cd goobert-cpp
+git clone https://github.com/drzo1dberg/goobert.git
+cd goobert
 mkdir build && cd build
 cmake ..
 make -j$(nproc)
@@ -296,8 +296,8 @@ User Action → ControlPanel → MainWindow → GridCell → MpvWidget → libmp
 ### Build from Source
 
 ```bash
-git clone https://github.com/yourusername/goobert-cpp.git
-cd goobert-cpp
+git clone https://github.com/drzo1dberg/goobert.git
+cd goobert
 
 # Create build directory
 mkdir build && cd build
@@ -318,7 +318,7 @@ sudo make install
 ### Project Structure
 
 ```
-goobert-cpp/
+goobert/
 ├── CMakeLists.txt           # Build configuration
 ├── goobert.ini.example      # Example config file
 ├── README.md                # This file
@@ -402,8 +402,8 @@ GitHub: [@drzo1dberg](https://github.com/drzo1dberg)
 
 ## 📞 Support
 
-- **Issues**: [GitHub Issues](https://github.com/yourusername/goobert-cpp/issues)
-- **Discussions**: [GitHub Discussions](https://github.com/yourusername/goobert-cpp/discussions)
+- **Issues**: [GitHub Issues](https://github.com/drzo1dberg/goobert/issues)
+- **Discussions**: [GitHub Discussions](https://github.com/drzo1dberg/goobert/discussions)
 
 ---
 

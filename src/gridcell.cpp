@@ -167,6 +167,16 @@ void GridCell::mousePressEvent(QMouseEvent *event)
 {
     if (event->button() == Qt::LeftButton) {
         emit selected(m_row, m_col);
+    } else if (event->button() == Qt::RightButton) {
+        // Right click: toggle pause on this cell
+        togglePause();
+        event->accept();
+        return;
+    } else if (event->button() == Qt::ForwardButton) {
+        // Mouse 4 (forward/thumb button): next on this cell only
+        next();
+        event->accept();
+        return;
     }
     QFrame::mousePressEvent(event);
 }
