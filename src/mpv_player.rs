@@ -1,9 +1,51 @@
 use anyhow::{anyhow, Result};
-use libmpv2::{events::Event, Mpv};
+use libmpv2::{
+    events::Event,
+    render::{OpenGLInitParams, RenderContext, RenderParam, RenderParamApiType},
+    Mpv,
+};
 use std::collections::HashSet;
+use std::ffi::{c_void, CString};
 use std::path::Path;
+use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::Arc;
 
 use crate::config::Config;
+
+/// Get OpenGL proc address using platform-specific loader
+fn get_gl_proc_address(_ctx: &(), name: &str) -> *mut c_void {
+    // Use libloading to get GL functions from system OpenGL
+    #[cfg(target_os = "linux")]
+    {
+        use libloading::Library;
+        static GL_LIB: std::sync::OnceLock<Option<Library>> = std::sync::OnceLock::new();
+
+        let lib = GL_LIB.get_or_init(|| {
+            unsafe { Library::new("libGL.so.1").ok() }
+        });
+
+        if let Some(lib) = lib {
+            let c_name = CString::new(name).unwrap();
+
+            // First try glXGetProcAddressARB
+            if let Ok(get_proc_addr) = unsafe {
+                lib.get::<unsafe extern "C" fn(*const i8) -> *mut c_void>(b"glXGetProcAddressARB\0")
+            } {
+                let addr = unsafe { get_proc_addr(c_name.as_ptr()) };
+                if !addr.is_null() {
+                    return addr;
+                }
+            }
+
+            // Fall back to direct symbol lookup
+            if let Ok(symbol) = unsafe { lib.get::<*mut c_void>(c_name.as_bytes_with_nul()) } {
+                return *symbol;
+            }
+        }
+    }
+
+    std::ptr::null_mut()
+}
 
 #[derive(Debug, Clone, Default)]
 pub struct PlayerState {
@@ -14,16 +56,20 @@ pub struct PlayerState {
     pub volume: i64,
     pub muted: bool,
     pub loop_file: bool,
+    pub video_width: i64,
+    pub video_height: i64,
 }
 
 pub struct MpvPlayer {
     mpv: Mpv,
+    render_ctx: Option<RenderContext>,
     playlist: Vec<String>,
     playlist_index: usize,
     seen_files: HashSet<String>,
     skipper_enabled: bool,
     skip_percent: f64,
     rotation: i64,
+    needs_render: Arc<AtomicBool>,
 }
 
 impl MpvPlayer {
@@ -39,16 +85,16 @@ impl MpvPlayer {
             };
         }
 
-        // Configure MPV options
+        // Configure MPV options - note: no video output yet, will use render API
         set_prop!("terminal", false);
-        set_prop!("vo", "null");
-        set_prop!("keep-open", false);
+        set_prop!("keep-open", "yes");
         set_prop!("idle", true);
         set_prop!("input-default-bindings", false);
         set_prop!("osc", false);
 
         // High-quality settings
         set_prop!("hwdec", "auto-safe");
+        set_prop!("profile", "gpu-hq");
 
         // Playback settings from config
         set_prop!("loop-file", config.playback.loop_count as i64);
@@ -62,13 +108,83 @@ impl MpvPlayer {
 
         Ok(Self {
             mpv,
+            render_ctx: None,
             playlist: Vec::new(),
             playlist_index: 0,
             seen_files: HashSet::new(),
             skipper_enabled: config.skipper.enabled,
             skip_percent: config.skipper.skip_percent,
             rotation: 0,
+            needs_render: Arc::new(AtomicBool::new(false)),
         })
+    }
+
+    /// Initialize the render context for OpenGL rendering
+    pub fn init_render_context(&mut self) -> Result<()> {
+        let gl_init_params = OpenGLInitParams {
+            get_proc_address: get_gl_proc_address,
+            ctx: (),
+        };
+
+        let needs_render = self.needs_render.clone();
+
+        let mut render_ctx = RenderContext::new(
+            unsafe { self.mpv.ctx.as_mut() },
+            vec![
+                RenderParam::ApiType(RenderParamApiType::OpenGl),
+                RenderParam::InitParams(gl_init_params),
+            ],
+        )
+        .map_err(|e| anyhow!("Failed to create render context: {:?}", e))?;
+
+        // Set update callback to signal when new frames are available
+        render_ctx.set_update_callback(move || {
+            needs_render.store(true, Ordering::SeqCst);
+        });
+
+        self.render_ctx = Some(render_ctx);
+        Ok(())
+    }
+
+    /// Check if a new frame needs to be rendered
+    pub fn needs_render(&self) -> bool {
+        self.needs_render.load(Ordering::SeqCst)
+    }
+
+    /// Render the current frame to an FBO
+    pub fn render(&mut self, fbo: i32, width: i32, height: i32) -> bool {
+        if let Some(render_ctx) = &self.render_ctx {
+            self.needs_render.store(false, Ordering::SeqCst);
+
+            // Check if there's an actual update
+            match render_ctx.update() {
+                Ok(flags) if flags == 0 => return false,
+                Err(e) => {
+                    log::warn!("Render update error: {:?}", e);
+                    return false;
+                }
+                _ => {}
+            }
+
+            if let Err(e) = render_ctx.render::<()>(fbo, width, height, true) {
+                log::warn!("Render error: {:?}", e);
+                return false;
+            }
+            true
+        } else {
+            false
+        }
+    }
+
+    /// Report that the frame has been displayed (for timing)
+    pub fn report_swap(&self) {
+        if let Some(render_ctx) = &self.render_ctx {
+            render_ctx.report_swap();
+        }
+    }
+
+    pub fn has_render_context(&self) -> bool {
+        self.render_ctx.is_some()
     }
 
     pub fn load_playlist(&mut self, files: Vec<String>) {
@@ -230,6 +346,8 @@ impl MpvPlayer {
             volume: self.get_i64_property("volume"),
             muted: self.get_bool_property("mute"),
             loop_file: self.is_loop_file(),
+            video_width: self.get_i64_property("width"),
+            video_height: self.get_i64_property("height"),
         }
     }
 
@@ -288,6 +406,8 @@ impl MpvPlayer {
 
 impl Drop for MpvPlayer {
     fn drop(&mut self) {
+        // Drop render context before stopping
+        self.render_ctx = None;
         self.stop();
     }
 }

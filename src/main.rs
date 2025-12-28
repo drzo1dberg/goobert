@@ -5,6 +5,7 @@ mod grid_cell;
 mod keymap;
 mod mpv_player;
 mod ui;
+mod video_renderer;
 
 use app::GoobertApp;
 

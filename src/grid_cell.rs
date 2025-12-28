@@ -7,6 +7,7 @@ pub struct GridCell {
     player: Option<MpvPlayer>,
     selected: bool,
     state: PlayerState,
+    render_initialized: bool,
 }
 
 impl GridCell {
@@ -17,12 +18,52 @@ impl GridCell {
             player: None,
             selected: false,
             state: PlayerState::default(),
+            render_initialized: false,
         }
     }
 
     pub fn initialize(&mut self) -> Result<()> {
         self.player = Some(MpvPlayer::new()?);
         Ok(())
+    }
+
+    /// Initialize the render context (must be called after GL context is available)
+    pub fn init_render_context(&mut self) -> Result<()> {
+        if let Some(player) = &mut self.player {
+            if !self.render_initialized {
+                player.init_render_context()?;
+                self.render_initialized = true;
+            }
+        }
+        Ok(())
+    }
+
+    pub fn has_render_context(&self) -> bool {
+        self.render_initialized
+    }
+
+    /// Check if the player needs to render a new frame
+    pub fn needs_render(&self) -> bool {
+        self.player
+            .as_ref()
+            .map(|p| p.needs_render())
+            .unwrap_or(false)
+    }
+
+    /// Render current frame to the given FBO
+    pub fn render(&mut self, fbo: i32, width: i32, height: i32) -> bool {
+        if let Some(player) = &mut self.player {
+            player.render(fbo, width, height)
+        } else {
+            false
+        }
+    }
+
+    /// Report that the frame has been displayed
+    pub fn report_swap(&self) {
+        if let Some(player) = &self.player {
+            player.report_swap();
+        }
     }
 
     pub fn set_playlist(&mut self, files: Vec<String>) {

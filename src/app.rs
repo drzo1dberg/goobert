@@ -1,5 +1,6 @@
 use eframe::egui;
 use rand::seq::SliceRandom;
+use std::sync::Arc;
 use std::time::{Duration, Instant};
 
 use crate::config::Config;
@@ -7,6 +8,7 @@ use crate::file_scanner::FileScanner;
 use crate::grid_cell::GridCell;
 use crate::keymap::{Action, KeyMap};
 use crate::ui::{ControlPanel, ControlPanelResponse};
+use crate::video_renderer::VideoRenderer;
 
 pub struct GoobertApp {
     config: &'static Config,
@@ -19,6 +21,9 @@ pub struct GoobertApp {
     is_tile_fullscreen: bool,
     fullscreen_cell: Option<(usize, usize)>,
     last_update: Instant,
+    video_renderer: Option<VideoRenderer>,
+    gl: Option<Arc<glow::Context>>,
+    render_initialized: bool,
 }
 
 impl GoobertApp {
@@ -30,6 +35,9 @@ impl GoobertApp {
 
         let config = Config::instance();
         let source = source_dir.unwrap_or_else(|| config.paths.default_media_path.clone());
+
+        // Get the glow context if available
+        let gl = cc.gl.clone();
 
         Self {
             config,
@@ -47,6 +55,22 @@ impl GoobertApp {
             is_tile_fullscreen: false,
             fullscreen_cell: None,
             last_update: Instant::now(),
+            video_renderer: None,
+            gl,
+            render_initialized: false,
+        }
+    }
+
+    fn init_video_renderer(&mut self) {
+        if self.video_renderer.is_some() {
+            return;
+        }
+
+        if let Some(gl) = &self.gl {
+            self.video_renderer = Some(VideoRenderer::new(gl.clone()));
+            log::info!("Video renderer initialized");
+        } else {
+            log::warn!("No GL context available for video rendering");
         }
     }
 
@@ -64,8 +88,18 @@ impl GoobertApp {
         // Clear existing cells
         self.stop_grid();
 
+        // Initialize video renderer if not done
+        self.init_video_renderer();
+
         let rows = self.control_panel.rows;
         let cols = self.control_panel.cols;
+        let cell_count = rows * cols;
+
+        // Create FBOs for video rendering
+        if let Some(renderer) = &mut self.video_renderer {
+            // Start with a reasonable default size, will be resized on first render
+            renderer.create_fbos(cell_count, 640, 480);
+        }
 
         // Create grid cells
         let mut rng = rand::thread_rng();
@@ -77,6 +111,11 @@ impl GoobertApp {
                 if let Err(e) = cell.initialize() {
                     log::error!("Failed to initialize cell [{},{}]: {}", row, col, e);
                     continue;
+                }
+
+                // Initialize render context for this cell
+                if let Err(e) = cell.init_render_context() {
+                    log::error!("Failed to init render context for cell [{},{}]: {}", row, col, e);
                 }
 
                 // Shuffle files for this cell
@@ -92,6 +131,7 @@ impl GoobertApp {
 
         self.control_panel.is_running = true;
         self.control_panel.log(&format!("Started {}x{} grid", cols, rows));
+        self.render_initialized = true;
 
         // Auto-select first cell
         if !self.cells.is_empty() {
@@ -108,6 +148,12 @@ impl GoobertApp {
         self.selected_col = None;
         self.control_panel.is_running = false;
         self.control_panel.log("Stopped");
+        self.render_initialized = false;
+
+        // Clean up FBOs
+        if let Some(renderer) = &mut self.video_renderer {
+            renderer.cleanup();
+        }
     }
 
     fn select_cell(&mut self, row: usize, col: usize) {
@@ -193,7 +239,6 @@ impl GoobertApp {
             Action::ShuffleAll => self.shuffle_all(),
             Action::ShuffleThenNextAll => {
                 self.shuffle_all();
-                // TODO: Add delay before next
                 self.next_all_if_not_looping();
             }
             Action::FullscreenGlobal => self.toggle_fullscreen(),
@@ -359,14 +404,41 @@ impl GoobertApp {
             cell.update();
         }
     }
+
+    fn render_videos(&mut self) {
+        if !self.render_initialized || self.cells.is_empty() {
+            return;
+        }
+
+        let renderer = match &self.video_renderer {
+            Some(r) => r,
+            None => return,
+        };
+
+        // Render each cell's video to its FBO
+        for (index, cell) in self.cells.iter_mut().enumerate() {
+            if let Some(fbo_id) = renderer.get_fbo_id(index) {
+                if let Some(fbo) = renderer.get_fbo(index) {
+                    // Render MPV frame to the FBO
+                    if cell.render(fbo_id, fbo.width as i32, fbo.height as i32) {
+                        cell.report_swap();
+                    }
+                }
+            }
+        }
+
+        // Restore default framebuffer
+        renderer.bind_default_fbo();
+    }
 }
 
 impl eframe::App for GoobertApp {
-    fn update(&mut self, ctx: &egui::Context, frame: &mut eframe::Frame) {
+    fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
         // Update cells periodically
         let now = Instant::now();
-        if now.duration_since(self.last_update) > Duration::from_millis(100) {
+        if now.duration_since(self.last_update) > Duration::from_millis(16) {
             self.update_cells();
+            self.render_videos();
             self.last_update = now;
         }
 
@@ -415,7 +487,7 @@ impl eframe::App for GoobertApp {
                 }
             });
 
-        // Request continuous updates
+        // Request continuous updates for video playback
         ctx.request_repaint();
     }
 }
@@ -462,6 +534,23 @@ impl GoobertApp {
 
                         ui.painter().rect_filled(rect, 0.0, bg_color);
 
+                        // Draw video frame if available
+                        let cell_index = row * cols + col;
+                        if let Some(renderer) = &self.video_renderer {
+                            if let Some(texture_id) = renderer.get_texture_id(cell_index) {
+                                let uv = egui::Rect::from_min_max(
+                                    egui::pos2(0.0, 1.0),
+                                    egui::pos2(1.0, 0.0),
+                                );
+                                ui.painter().image(
+                                    texture_id,
+                                    rect,
+                                    uv,
+                                    egui::Color32::WHITE,
+                                );
+                            }
+                        }
+
                         // Draw cell info
                         if let Some(cell) = self.get_cell(row, col) {
                             let state = cell.state();
@@ -476,6 +565,17 @@ impl GoobertApp {
                             } else {
                                 filename
                             };
+
+                            // Draw semi-transparent overlay for text
+                            let text_bg = egui::Rect::from_min_size(
+                                rect.min,
+                                egui::vec2(rect.width(), 20.0),
+                            );
+                            ui.painter().rect_filled(
+                                text_bg,
+                                0.0,
+                                egui::Color32::from_rgba_unmultiplied(0, 0, 0, 180),
+                            );
 
                             ui.painter().text(
                                 rect.min + egui::vec2(5.0, 5.0),

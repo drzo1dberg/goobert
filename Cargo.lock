@@ -1566,6 +1566,7 @@ dependencies = [
  "egui_glow",
  "env_logger",
  "glow 0.14.2",
+ "libloading",
  "libmpv2",
  "log",
  "rand 0.8.5",
