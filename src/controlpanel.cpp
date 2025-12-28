@@ -13,8 +13,9 @@
 #include <QDir>
 #include <QClipboard>
 #include <QApplication>
+#include <utility>
 
-ControlPanel::ControlPanel(const QString &sourceDir, QWidget *parent)
+ControlPanel::ControlPanel(QString sourceDir, QWidget *parent)
     : QWidget(parent)
 {
     setupUi();
@@ -22,7 +23,7 @@ ControlPanel::ControlPanel(const QString &sourceDir, QWidget *parent)
     Config &cfg = Config::instance();
 
     // Use provided source dir or config default
-    QString initialDir = sourceDir.isEmpty() ? cfg.defaultMediaPath() : sourceDir;
+    QString initialDir = sourceDir.isEmpty() ? cfg.defaultMediaPath() : std::move(sourceDir);
     m_sourceEdit->setText(initialDir);
 }
 

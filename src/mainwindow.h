@@ -7,6 +7,7 @@
 #include <QMap>
 #include <QTimer>
 #include <memory>
+#include <random>
 #include "gridcell.h"
 #include "controlpanel.h"
 
@@ -15,8 +16,12 @@ class MainWindow : public QMainWindow
     Q_OBJECT
 
 public:
-    explicit MainWindow(const QString &sourceDir, QWidget *parent = nullptr);
+    explicit MainWindow(QString sourceDir, QWidget *parent = nullptr);
     ~MainWindow();
+
+    // Non-copyable
+    MainWindow(const MainWindow&) = delete;
+    MainWindow& operator=(const MainWindow&) = delete;
 
 protected:
     void keyPressEvent(QKeyEvent *event) override;
@@ -85,4 +90,7 @@ private:
     int m_selectedRow = -1;
     int m_selectedCol = -1;
     int m_currentVolume = 30;  // Track current volume level
+
+    // Random number generator for shuffle operations
+    static inline std::mt19937 s_rng{std::random_device{}()};
 };

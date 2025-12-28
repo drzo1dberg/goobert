@@ -4,44 +4,43 @@
 #include <QMap>
 #include <QSet>
 #include <QString>
-#include <functional>
 
 // Central keymap for all keyboard shortcuts
 class KeyMap
 {
 public:
-    enum Action {
+    enum class Action {
         // Global actions
-        PAUSE_ALL,
-        NEXT_ALL,
-        PREV_ALL,
-        SHUFFLE_ALL,
-        SHUFFLE_THEN_NEXT_ALL,
-        FULLSCREEN_GLOBAL,
-        EXIT_FULLSCREEN,
-        VOLUME_UP,
-        VOLUME_DOWN,
+        PauseAll,
+        NextAll,
+        PrevAll,
+        ShuffleAll,
+        ShuffleThenNextAll,
+        FullscreenGlobal,
+        ExitFullscreen,
+        VolumeUp,
+        VolumeDown,
 
         // Navigation
-        NAVIGATE_UP,
-        NAVIGATE_DOWN,
-        NAVIGATE_LEFT,
-        NAVIGATE_RIGHT,
+        NavigateUp,
+        NavigateDown,
+        NavigateLeft,
+        NavigateRight,
 
         // Selected cell actions
-        FULLSCREEN_SELECTED,
-        SEEK_FORWARD,
-        SEEK_BACKWARD,
-        FRAME_STEP_FORWARD,
-        FRAME_STEP_BACKWARD,
-        TOGGLE_LOOP,
-        ZOOM_IN,
-        ZOOM_OUT,
-        ROTATE,
-        SCREENSHOT,
+        FullscreenSelected,
+        SeekForward,
+        SeekBackward,
+        FrameStepForward,
+        FrameStepBackward,
+        ToggleLoop,
+        ZoomIn,
+        ZoomOut,
+        Rotate,
+        Screenshot,
 
         // No action
-        NO_ACTION
+        NoAction
     };
 
     static KeyMap& instance();
@@ -76,6 +75,11 @@ public:
 
 private:
     KeyMap();
+
+    // Non-copyable (singleton)
+    KeyMap(const KeyMap&) = delete;
+    KeyMap& operator=(const KeyMap&) = delete;
+
     void setupDefaultBindings();
 
     QMap<KeyBinding, Action> m_bindings;

@@ -18,70 +18,70 @@ void KeyMap::setupDefaultBindings()
     // ===========================================================================
 
     // Pause/Play - DOPPELBELEGUNG: Space und P
-    m_bindings[{Qt::Key_Space, Qt::NoModifier}] = PAUSE_ALL;
-    m_bindings[{Qt::Key_P, Qt::NoModifier}] = PAUSE_ALL;
+    m_bindings[{Qt::Key_Space, Qt::NoModifier}] = Action::PauseAll;
+    m_bindings[{Qt::Key_P, Qt::NoModifier}] = Action::PauseAll;
 
     // Volume - U/I
-    m_bindings[{Qt::Key_U, Qt::NoModifier}] = VOLUME_UP;
-    m_bindings[{Qt::Key_I, Qt::NoModifier}] = VOLUME_DOWN;
+    m_bindings[{Qt::Key_U, Qt::NoModifier}] = Action::VolumeUp;
+    m_bindings[{Qt::Key_I, Qt::NoModifier}] = Action::VolumeDown;
 
     // Navigation - WASD
-    m_bindings[{Qt::Key_W, Qt::NoModifier}] = NAVIGATE_UP;
-    m_bindings[{Qt::Key_S, Qt::NoModifier}] = NAVIGATE_DOWN;
-    m_bindings[{Qt::Key_A, Qt::NoModifier}] = NAVIGATE_LEFT;
-    m_bindings[{Qt::Key_D, Qt::NoModifier}] = NAVIGATE_RIGHT;
+    m_bindings[{Qt::Key_W, Qt::NoModifier}] = Action::NavigateUp;
+    m_bindings[{Qt::Key_S, Qt::NoModifier}] = Action::NavigateDown;
+    m_bindings[{Qt::Key_A, Qt::NoModifier}] = Action::NavigateLeft;
+    m_bindings[{Qt::Key_D, Qt::NoModifier}] = Action::NavigateRight;
 
     // Seek - V und C
-    m_bindings[{Qt::Key_V, Qt::NoModifier}] = SEEK_FORWARD;
-    m_bindings[{Qt::Key_C, Qt::NoModifier}] = SEEK_BACKWARD;
+    m_bindings[{Qt::Key_V, Qt::NoModifier}] = Action::SeekForward;
+    m_bindings[{Qt::Key_C, Qt::NoModifier}] = Action::SeekBackward;
 
     // Screenshot
-    m_bindings[{Qt::Key_T, Qt::NoModifier}] = SCREENSHOT;
+    m_bindings[{Qt::Key_T, Qt::NoModifier}] = Action::Screenshot;
 
     // Frame stepping
-    m_bindings[{Qt::Key_B, Qt::NoModifier}] = FRAME_STEP_BACKWARD;
-    m_bindings[{Qt::Key_N, Qt::NoModifier}] = FRAME_STEP_FORWARD;
+    m_bindings[{Qt::Key_B, Qt::NoModifier}] = Action::FrameStepBackward;
+    m_bindings[{Qt::Key_N, Qt::NoModifier}] = Action::FrameStepForward;
 
     // Grid controls (S conflicts with navigation, using Q for shuffle)
-    m_bindings[{Qt::Key_N, Qt::ShiftModifier}] = NEXT_ALL;  // Shift+N for next all
-    m_bindings[{Qt::Key_Q, Qt::NoModifier}] = SHUFFLE_ALL;
-    m_bindings[{Qt::Key_X, Qt::NoModifier}] = SHUFFLE_THEN_NEXT_ALL;
+    m_bindings[{Qt::Key_N, Qt::ShiftModifier}] = Action::NextAll;  // Shift+N for next all
+    m_bindings[{Qt::Key_Q, Qt::NoModifier}] = Action::ShuffleAll;
+    m_bindings[{Qt::Key_X, Qt::NoModifier}] = Action::ShuffleThenNextAll;
 
     // Fullscreen
-    m_bindings[{Qt::Key_F11, Qt::NoModifier}] = FULLSCREEN_GLOBAL;
-    m_bindings[{Qt::Key_Escape, Qt::NoModifier}] = EXIT_FULLSCREEN;
-    m_bindings[{Qt::Key_F, Qt::NoModifier}] = FULLSCREEN_SELECTED;
+    m_bindings[{Qt::Key_F11, Qt::NoModifier}] = Action::FullscreenGlobal;
+    m_bindings[{Qt::Key_Escape, Qt::NoModifier}] = Action::ExitFullscreen;
+    m_bindings[{Qt::Key_F, Qt::NoModifier}] = Action::FullscreenSelected;
 
     // Selected cell controls
-    m_bindings[{Qt::Key_L, Qt::NoModifier}] = TOGGLE_LOOP;
-    m_bindings[{Qt::Key_Z, Qt::NoModifier}] = ZOOM_IN;
-    m_bindings[{Qt::Key_Z, Qt::ShiftModifier}] = ZOOM_OUT;
-    m_bindings[{Qt::Key_R, Qt::ControlModifier}] = ROTATE;
+    m_bindings[{Qt::Key_L, Qt::NoModifier}] = Action::ToggleLoop;
+    m_bindings[{Qt::Key_Z, Qt::NoModifier}] = Action::ZoomIn;
+    m_bindings[{Qt::Key_Z, Qt::ShiftModifier}] = Action::ZoomOut;
+    m_bindings[{Qt::Key_R, Qt::ControlModifier}] = Action::Rotate;
 
     // Descriptions
-    m_descriptions[PAUSE_ALL] = "Pause/Play all cells";
-    m_descriptions[NEXT_ALL] = "Next video (all cells)";
-    m_descriptions[PREV_ALL] = "Previous video (all cells)";
-    m_descriptions[SHUFFLE_ALL] = "Shuffle all playlists";
-    m_descriptions[SHUFFLE_THEN_NEXT_ALL] = "Shuffle then next";
-    m_descriptions[FULLSCREEN_GLOBAL] = "Toggle fullscreen";
-    m_descriptions[EXIT_FULLSCREEN] = "Exit fullscreen";
-    m_descriptions[VOLUME_UP] = "Volume up";
-    m_descriptions[VOLUME_DOWN] = "Volume down";
-    m_descriptions[NAVIGATE_UP] = "Navigate selection up";
-    m_descriptions[NAVIGATE_DOWN] = "Navigate selection down";
-    m_descriptions[NAVIGATE_LEFT] = "Navigate selection left";
-    m_descriptions[NAVIGATE_RIGHT] = "Navigate selection right";
-    m_descriptions[FULLSCREEN_SELECTED] = "Fullscreen selected cell";
-    m_descriptions[SEEK_FORWARD] = "Seek forward 5s";
-    m_descriptions[SEEK_BACKWARD] = "Seek backward 5s";
-    m_descriptions[FRAME_STEP_FORWARD] = "Frame step forward";
-    m_descriptions[FRAME_STEP_BACKWARD] = "Frame step backward";
-    m_descriptions[TOGGLE_LOOP] = "Toggle loop on selected";
-    m_descriptions[ZOOM_IN] = "Zoom in";
-    m_descriptions[ZOOM_OUT] = "Zoom out";
-    m_descriptions[ROTATE] = "Rotate video";
-    m_descriptions[SCREENSHOT] = "Take screenshot";
+    m_descriptions[Action::PauseAll] = "Pause/Play all cells";
+    m_descriptions[Action::NextAll] = "Next video (all cells)";
+    m_descriptions[Action::PrevAll] = "Previous video (all cells)";
+    m_descriptions[Action::ShuffleAll] = "Shuffle all playlists";
+    m_descriptions[Action::ShuffleThenNextAll] = "Shuffle then next";
+    m_descriptions[Action::FullscreenGlobal] = "Toggle fullscreen";
+    m_descriptions[Action::ExitFullscreen] = "Exit fullscreen";
+    m_descriptions[Action::VolumeUp] = "Volume up";
+    m_descriptions[Action::VolumeDown] = "Volume down";
+    m_descriptions[Action::NavigateUp] = "Navigate selection up";
+    m_descriptions[Action::NavigateDown] = "Navigate selection down";
+    m_descriptions[Action::NavigateLeft] = "Navigate selection left";
+    m_descriptions[Action::NavigateRight] = "Navigate selection right";
+    m_descriptions[Action::FullscreenSelected] = "Fullscreen selected cell";
+    m_descriptions[Action::SeekForward] = "Seek forward 5s";
+    m_descriptions[Action::SeekBackward] = "Seek backward 5s";
+    m_descriptions[Action::FrameStepForward] = "Frame step forward";
+    m_descriptions[Action::FrameStepBackward] = "Frame step backward";
+    m_descriptions[Action::ToggleLoop] = "Toggle loop on selected";
+    m_descriptions[Action::ZoomIn] = "Zoom in";
+    m_descriptions[Action::ZoomOut] = "Zoom out";
+    m_descriptions[Action::Rotate] = "Rotate video";
+    m_descriptions[Action::Screenshot] = "Take screenshot";
 }
 
 KeyMap::Action KeyMap::getAction(QKeyEvent *event) const
@@ -90,7 +90,7 @@ KeyMap::Action KeyMap::getAction(QKeyEvent *event) const
     binding.key = static_cast<Qt::Key>(event->key());
     binding.modifiers = event->modifiers() & ~Qt::KeypadModifier; // Ignore keypad modifier
 
-    return m_bindings.value(binding, NO_ACTION);
+    return m_bindings.value(binding, Action::NoAction);
 }
 
 QList<QString> KeyMap::getKeysForAction(Action action) const
@@ -140,13 +140,13 @@ QString KeyMap::generateTooltip() const
 
     // Global actions
     tooltip += "Global:\n";
-    tooltip += QString("  %1 - %2\n").arg(getKeysForAction(PAUSE_ALL).join("/")).arg(getActionDescription(PAUSE_ALL));
-    tooltip += QString("  %1 - %2\n").arg(getKeysForAction(VOLUME_UP).join("/")).arg(getActionDescription(VOLUME_UP));
-    tooltip += QString("  %1 - %2\n").arg(getKeysForAction(VOLUME_DOWN).join("/")).arg(getActionDescription(VOLUME_DOWN));
-    tooltip += QString("  %1 - %2\n").arg(getKeysForAction(NEXT_ALL).join("/")).arg(getActionDescription(NEXT_ALL));
-    tooltip += QString("  %1 - %2\n").arg(getKeysForAction(SHUFFLE_ALL).join("/")).arg(getActionDescription(SHUFFLE_ALL));
-    tooltip += QString("  %1 - %2\n").arg(getKeysForAction(SHUFFLE_THEN_NEXT_ALL).join("/")).arg(getActionDescription(SHUFFLE_THEN_NEXT_ALL));
-    tooltip += QString("  %1 - %2\n").arg(getKeysForAction(FULLSCREEN_GLOBAL).join("/")).arg(getActionDescription(FULLSCREEN_GLOBAL));
+    tooltip += QString("  %1 - %2\n").arg(getKeysForAction(Action::PauseAll).join("/")).arg(getActionDescription(Action::PauseAll));
+    tooltip += QString("  %1 - %2\n").arg(getKeysForAction(Action::VolumeUp).join("/")).arg(getActionDescription(Action::VolumeUp));
+    tooltip += QString("  %1 - %2\n").arg(getKeysForAction(Action::VolumeDown).join("/")).arg(getActionDescription(Action::VolumeDown));
+    tooltip += QString("  %1 - %2\n").arg(getKeysForAction(Action::NextAll).join("/")).arg(getActionDescription(Action::NextAll));
+    tooltip += QString("  %1 - %2\n").arg(getKeysForAction(Action::ShuffleAll).join("/")).arg(getActionDescription(Action::ShuffleAll));
+    tooltip += QString("  %1 - %2\n").arg(getKeysForAction(Action::ShuffleThenNextAll).join("/")).arg(getActionDescription(Action::ShuffleThenNextAll));
+    tooltip += QString("  %1 - %2\n").arg(getKeysForAction(Action::FullscreenGlobal).join("/")).arg(getActionDescription(Action::FullscreenGlobal));
 
     // Navigation
     tooltip += "\nNavigation:\n";
@@ -154,16 +154,16 @@ QString KeyMap::generateTooltip() const
 
     // Selected cell
     tooltip += "\nSelected Cell:\n";
-    tooltip += QString("  %1 - %2\n").arg(getKeysForAction(FULLSCREEN_SELECTED).join("/")).arg(getActionDescription(FULLSCREEN_SELECTED));
-    tooltip += QString("  %1 - %2\n").arg(getKeysForAction(SEEK_FORWARD).join("/")).arg(getActionDescription(SEEK_FORWARD));
-    tooltip += QString("  %1 - %2\n").arg(getKeysForAction(SEEK_BACKWARD).join("/")).arg(getActionDescription(SEEK_BACKWARD));
-    tooltip += QString("  %1 - %2\n").arg(getKeysForAction(FRAME_STEP_FORWARD).join("/")).arg(getActionDescription(FRAME_STEP_FORWARD));
-    tooltip += QString("  %1 - %2\n").arg(getKeysForAction(FRAME_STEP_BACKWARD).join("/")).arg(getActionDescription(FRAME_STEP_BACKWARD));
-    tooltip += QString("  %1 - %2\n").arg(getKeysForAction(SCREENSHOT).join("/")).arg(getActionDescription(SCREENSHOT));
-    tooltip += QString("  %1 - %2\n").arg(getKeysForAction(TOGGLE_LOOP).join("/")).arg(getActionDescription(TOGGLE_LOOP));
-    tooltip += QString("  %1 - %2\n").arg(getKeysForAction(ZOOM_IN).join("/")).arg(getActionDescription(ZOOM_IN));
-    tooltip += QString("  %1 - %2\n").arg(getKeysForAction(ZOOM_OUT).join("/")).arg(getActionDescription(ZOOM_OUT));
-    tooltip += QString("  %1 - %2\n").arg(getKeysForAction(ROTATE).join("/")).arg(getActionDescription(ROTATE));
+    tooltip += QString("  %1 - %2\n").arg(getKeysForAction(Action::FullscreenSelected).join("/")).arg(getActionDescription(Action::FullscreenSelected));
+    tooltip += QString("  %1 - %2\n").arg(getKeysForAction(Action::SeekForward).join("/")).arg(getActionDescription(Action::SeekForward));
+    tooltip += QString("  %1 - %2\n").arg(getKeysForAction(Action::SeekBackward).join("/")).arg(getActionDescription(Action::SeekBackward));
+    tooltip += QString("  %1 - %2\n").arg(getKeysForAction(Action::FrameStepForward).join("/")).arg(getActionDescription(Action::FrameStepForward));
+    tooltip += QString("  %1 - %2\n").arg(getKeysForAction(Action::FrameStepBackward).join("/")).arg(getActionDescription(Action::FrameStepBackward));
+    tooltip += QString("  %1 - %2\n").arg(getKeysForAction(Action::Screenshot).join("/")).arg(getActionDescription(Action::Screenshot));
+    tooltip += QString("  %1 - %2\n").arg(getKeysForAction(Action::ToggleLoop).join("/")).arg(getActionDescription(Action::ToggleLoop));
+    tooltip += QString("  %1 - %2\n").arg(getKeysForAction(Action::ZoomIn).join("/")).arg(getActionDescription(Action::ZoomIn));
+    tooltip += QString("  %1 - %2\n").arg(getKeysForAction(Action::ZoomOut).join("/")).arg(getActionDescription(Action::ZoomOut));
+    tooltip += QString("  %1 - %2\n").arg(getKeysForAction(Action::Rotate).join("/")).arg(getActionDescription(Action::Rotate));
 
     // Mouse controls
     tooltip += "\nMouse (on cell):\n";

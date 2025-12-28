@@ -13,7 +13,7 @@ class ControlPanel : public QWidget
     Q_OBJECT
 
 public:
-    explicit ControlPanel(const QString &sourceDir, QWidget *parent = nullptr);
+    explicit ControlPanel(QString sourceDir, QWidget *parent = nullptr);
 
     QString sourceDir() const;
     int rows() const;

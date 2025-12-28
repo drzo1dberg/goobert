@@ -277,6 +277,7 @@ nano ~/.config/goobert/goobert.ini
 - **`ControlPanel`** - UI controls and status monitoring
 - **`FileScanner`** - Recursive media file discovery
 - **`Config`** - Singleton configuration manager (Qt QSettings)
+- **`KeyMap`** - Singleton keyboard shortcut manager with type-safe `enum class` actions
 
 ### Signal/Slot Flow
 
@@ -359,13 +360,19 @@ goobert/
     ├── controlpanel.{cpp,h} # UI controls
     ├── filescanner.{cpp,h}  # Media file scanner
     ├── config.{cpp,h}       # Configuration manager
+    ├── keymap.{cpp,h}       # Keyboard shortcut management
     └── mpvcontroller.{cpp,h}# MPV IPC (optional)
 ```
 
 ### Code Quality
-- **Modern C++20** - Uses latest language features
+- **Modern C++20** - Uses latest language features:
+  - `enum class` for type-safe enumerations
+  - Move semantics with `std::move` for efficient string handling
+  - `static inline` member initialization for thread-safe singletons
+  - Uniform initialization with brace syntax
+  - `= delete` for explicitly non-copyable classes
 - **Qt Best Practices** - Signal/slot architecture, RAII, parent-child cleanup
-- **Thread-Safe** - Proper Qt event loop integration
+- **Thread-Safe** - Proper Qt event loop integration, static RNG for shuffle operations
 - **Memory Safe** - No manual memory leaks, proper resource cleanup
 
 ---

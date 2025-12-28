@@ -11,10 +11,11 @@
 #include <QScreen>
 #include <random>
 #include <algorithm>
+#include <utility>
 
-MainWindow::MainWindow(const QString &sourceDir, QWidget *parent)
+MainWindow::MainWindow(QString sourceDir, QWidget *parent)
     : QMainWindow(parent)
-    , m_sourceDir(sourceDir)
+    , m_sourceDir(std::move(sourceDir))
 {
     Config &cfg = Config::instance();
     m_currentVolume = cfg.defaultVolume();
@@ -108,11 +109,9 @@ void MainWindow::startGrid()
         for (int c = 0; c < m_cols; ++c) {
             GridCell *cell = m_cellMap[{r, c}];
             if (cell) {
-                // Shuffle files for each cell
+                // Shuffle files for each cell using static RNG
                 QStringList shuffled = files;
-                std::random_device rd;
-                std::mt19937 gen(rd());
-                std::shuffle(shuffled.begin(), shuffled.end(), gen);
+                std::shuffle(shuffled.begin(), shuffled.end(), s_rng);
                 cell->setPlaylist(shuffled);
                 cell->play();
             }
@@ -201,82 +200,82 @@ void MainWindow::keyPressEvent(QKeyEvent *event)
     // Execute action
     switch (action) {
     // Global actions
-    case KeyMap::PAUSE_ALL:
+    case KeyMap::Action::PauseAll:
         playPauseAll();
         break;
-    case KeyMap::VOLUME_UP:
+    case KeyMap::Action::VolumeUp:
         volumeUpAll();
         break;
-    case KeyMap::VOLUME_DOWN:
+    case KeyMap::Action::VolumeDown:
         volumeDownAll();
         break;
-    case KeyMap::NEXT_ALL:
+    case KeyMap::Action::NextAll:
         nextAllIfNotLooping();
         break;
-    case KeyMap::SHUFFLE_ALL:
+    case KeyMap::Action::ShuffleAll:
         shuffleAll();
         break;
-    case KeyMap::SHUFFLE_THEN_NEXT_ALL:
+    case KeyMap::Action::ShuffleThenNextAll:
         shuffleThenNextAll();
         break;
-    case KeyMap::FULLSCREEN_GLOBAL:
+    case KeyMap::Action::FullscreenGlobal:
         toggleFullscreen();
         break;
-    case KeyMap::EXIT_FULLSCREEN:
+    case KeyMap::Action::ExitFullscreen:
         exitFullscreen();
         break;
 
     // Navigation
-    case KeyMap::NAVIGATE_UP:
+    case KeyMap::Action::NavigateUp:
         navigateSelection(0, -1);
         event->accept();
         break;
-    case KeyMap::NAVIGATE_DOWN:
+    case KeyMap::Action::NavigateDown:
         navigateSelection(0, 1);
         event->accept();
         break;
-    case KeyMap::NAVIGATE_LEFT:
+    case KeyMap::Action::NavigateLeft:
         navigateSelection(-1, 0);
         event->accept();
         break;
-    case KeyMap::NAVIGATE_RIGHT:
+    case KeyMap::Action::NavigateRight:
         navigateSelection(1, 0);
         event->accept();
         break;
 
     // Selected cell actions
-    case KeyMap::FULLSCREEN_SELECTED:
+    case KeyMap::Action::FullscreenSelected:
         toggleTileFullscreen();
         break;
-    case KeyMap::SEEK_FORWARD:
+    case KeyMap::Action::SeekForward:
         seekSelected(5);  // V key: 5 seconds forward
         break;
-    case KeyMap::SEEK_BACKWARD:
+    case KeyMap::Action::SeekBackward:
         seekSelected(-5);  // C key: 5 seconds backward
         break;
-    case KeyMap::FRAME_STEP_FORWARD:
+    case KeyMap::Action::FrameStepForward:
         frameStepSelected();  // N key: one frame forward
         break;
-    case KeyMap::FRAME_STEP_BACKWARD:
+    case KeyMap::Action::FrameStepBackward:
         frameBackStepSelected();  // B key: one frame backward
         break;
-    case KeyMap::TOGGLE_LOOP:
+    case KeyMap::Action::ToggleLoop:
         toggleLoopSelected();
         break;
-    case KeyMap::ZOOM_IN:
+    case KeyMap::Action::ZoomIn:
         zoomInSelected();
         break;
-    case KeyMap::ZOOM_OUT:
+    case KeyMap::Action::ZoomOut:
         zoomOutSelected();
         break;
-    case KeyMap::ROTATE:
+    case KeyMap::Action::Rotate:
         rotateSelected();
         break;
-    case KeyMap::SCREENSHOT:
+    case KeyMap::Action::Screenshot:
         screenshotSelected();
         break;
 
-    case KeyMap::NO_ACTION:
+    case KeyMap::Action::NoAction:
     default:
         QMainWindow::keyPressEvent(event);
         break;
