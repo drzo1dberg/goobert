@@ -39,6 +39,7 @@ void ControlPanel::setupUi()
         QSlider::handle:horizontal { background: #666; width: 14px; margin: -4px 0; }
         QTableWidget { background-color: #1e1e1e; gridline-color: #333; }
         QHeaderView::section { background-color: #2a2a2a; padding: 4px; border: none; }
+        QToolTip { background-color: #2a2a2a; color: #ddd; border: 1px solid #444; padding: 6px; }
     )");
 
     auto *mainLayout = new QVBoxLayout(this);
