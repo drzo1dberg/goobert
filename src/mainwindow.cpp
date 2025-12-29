@@ -371,6 +371,10 @@ void MainWindow::enterTileFullscreen(int row, int col)
     m_isTileFullscreen = true;
     m_fullscreenCell = cell;
 
+    // Enable full mpv GUI (OSC) for fullscreen cell
+    cell->setOscEnabled(true);
+    cell->setOsdLevel(1);
+
     if (!m_isFullscreen) {
         toggleFullscreen();
     }
@@ -381,6 +385,12 @@ void MainWindow::enterTileFullscreen(int row, int col)
 void MainWindow::exitTileFullscreen()
 {
     if (!m_isTileFullscreen) return;
+
+    // Disable OSC on fullscreen cell before restoring grid
+    if (m_fullscreenCell) {
+        m_fullscreenCell->setOscEnabled(false);
+        m_fullscreenCell->setOsdLevel(0);
+    }
 
     // Restore all cells
     for (GridCell *c : m_cells) {

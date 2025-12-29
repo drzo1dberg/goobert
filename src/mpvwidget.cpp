@@ -9,6 +9,7 @@
 #include <QDir>
 #include <QClipboard>
 #include <QApplication>
+#include <QMouseEvent>
 #include <stdexcept>
 #include <clocale>
 #include <locale>
@@ -61,7 +62,9 @@ void MpvWidget::createMpv()
     mpv_set_option_string(m_mpv, "idle", "yes");
     mpv_set_option_string(m_mpv, "input-default-bindings", "no");
     mpv_set_option_string(m_mpv, "input-vo-keyboard", "no");
-    mpv_set_option_string(m_mpv, "osc", "no");
+    mpv_set_option_string(m_mpv, "osc", "yes");  // Load OSC script
+    mpv_set_option_string(m_mpv, "osd-bar", "yes");
+    mpv_set_option_string(m_mpv, "script-opts", "osc-visibility=never");  // Hidden by default
     mpv_set_option_string(m_mpv, "loop-playlist", "inf");
 
     // Load settings from config
@@ -520,6 +523,31 @@ void MpvWidget::zoomOut()
     setProperty("video-zoom", zoom - MpvConstants::kZoomStep);
 }
 
+// OSC/OSD control for fullscreen mode
+void MpvWidget::setOscEnabled(bool enabled)
+{
+    if (!m_mpv) return;
+
+    m_oscEnabled = enabled;
+
+    // Change OSC visibility via script-message
+    QString visibility = enabled ? "auto" : "never";
+    command(QVariantList{"script-message", "osc-visibility", visibility});
+
+    // Enable input bindings for OSC interaction in fullscreen
+    setProperty("input-default-bindings", enabled ? "yes" : "no");
+    setProperty("input-vo-keyboard", enabled ? "yes" : "no");
+
+    // Enable mouse tracking for OSC
+    setMouseTracking(enabled);
+}
+
+void MpvWidget::setOsdLevel(int level)
+{
+    if (!m_mpv) return;
+    setProperty("osd-level", level);
+}
+
 // Screenshot
 void MpvWidget::screenshot()
 {
@@ -551,4 +579,46 @@ void MpvWidget::screenshot()
             qDebug() << "Screenshot saved and copied to clipboard:" << newestFile;
         }
     });
+}
+
+// Mouse event forwarding for OSC interaction
+void MpvWidget::mouseMoveEvent(QMouseEvent *event)
+{
+    if (m_oscEnabled && m_mpv) {
+        // Forward mouse position to mpv for OSC hover
+        command(QVariantList{"mouse", event->pos().x(), event->pos().y()});
+    }
+    QOpenGLWidget::mouseMoveEvent(event);
+}
+
+void MpvWidget::mousePressEvent(QMouseEvent *event)
+{
+    if (m_oscEnabled && m_mpv) {
+        int btn = 0;
+        if (event->button() == Qt::LeftButton) btn = 0;
+        else if (event->button() == Qt::MiddleButton) btn = 1;
+        else if (event->button() == Qt::RightButton) btn = 2;
+
+        command(QVariantList{"mouse", event->pos().x(), event->pos().y(), btn, "single"});
+    }
+    QOpenGLWidget::mousePressEvent(event);
+}
+
+void MpvWidget::mouseReleaseEvent(QMouseEvent *event)
+{
+    // mpv OSC needs the release event too
+    if (m_oscEnabled && m_mpv) {
+        // Send mouse position update (release is implicit)
+        command(QVariantList{"mouse", event->pos().x(), event->pos().y()});
+    }
+    QOpenGLWidget::mouseReleaseEvent(event);
+}
+
+void MpvWidget::leaveEvent(QEvent *event)
+{
+    if (m_oscEnabled && m_mpv) {
+        // Signal mouse left the widget (OSC should hide)
+        command(QVariantList{"mouse", -1, -1});
+    }
+    QOpenGLWidget::leaveEvent(event);
 }

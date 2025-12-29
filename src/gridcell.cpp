@@ -173,6 +173,16 @@ void GridCell::screenshot()
     m_mpv->screenshot();
 }
 
+void GridCell::setOscEnabled(bool enabled)
+{
+    m_mpv->setOscEnabled(enabled);
+}
+
+void GridCell::setOsdLevel(int level)
+{
+    m_mpv->setOsdLevel(level);
+}
+
 void GridCell::updatePlaylistPath(const QString &oldPath, const QString &newPath)
 {
     m_mpv->updatePlaylistPath(oldPath, newPath);

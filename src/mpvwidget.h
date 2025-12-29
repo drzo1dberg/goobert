@@ -74,6 +74,10 @@ public:
     // Screenshot
     void screenshot();
 
+    // OSD/OSC control (for fullscreen mode)
+    void setOscEnabled(bool enabled);
+    void setOsdLevel(int level);
+
 signals:
     void fileChanged(const QString &path);
     void positionChanged(double pos);
@@ -85,6 +89,10 @@ signals:
 protected:
     void initializeGL() override;
     void paintGL() override;
+    void mouseMoveEvent(QMouseEvent *event) override;
+    void mousePressEvent(QMouseEvent *event) override;
+    void mouseReleaseEvent(QMouseEvent *event) override;
+    void leaveEvent(QEvent *event) override;
 
 private slots:
     void onMpvEvents();
@@ -116,4 +124,7 @@ private:
 
     // Original loop count from config (for restoring after inf toggle)
     int m_originalLoopCount = 5;
+
+    // OSC state
+    bool m_oscEnabled = false;
 };

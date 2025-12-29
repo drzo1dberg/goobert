@@ -57,6 +57,10 @@ public:
     // Screenshot
     void screenshot();
 
+    // OSC/OSD control (for fullscreen mode)
+    void setOscEnabled(bool enabled);
+    void setOsdLevel(int level);
+
     // Playlist management
     void updatePlaylistPath(const QString &oldPath, const QString &newPath);
 
