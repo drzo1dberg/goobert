@@ -20,7 +20,7 @@
 - 🎨 **Professional UI** - Clean, dark interface designed for production environments
 - 🔧 **Fully Configurable** - Control every aspect through INI configuration files
 - 🖱️ **Intuitive Controls** - Mouse and keyboard shortcuts for efficient operation
-- 📦 **Cross-Platform** - Runs on Linux with minimal dependencies
+- 📦 **Cross-Platform** - Runs on Linux and macOS with minimal dependencies
 - 🆓 **Open Source** - MIT licensed, free for commercial and personal use
 
 ---
@@ -69,8 +69,8 @@
 ## 📋 System Requirements
 
 ### Minimum Requirements
-- **OS**: Linux (Debian, Ubuntu, Arch, Fedora, etc.)
-- **CPU**: Any modern x86_64 processor
+- **OS**: Linux (Debian, Ubuntu, Arch, Fedora, etc.) or macOS 11+
+- **CPU**: Any modern x86_64 or Apple Silicon processor
 - **GPU**: OpenGL 3.0+ support
 - **RAM**: 2GB (4GB+ recommended for large grids)
 - **Disk**: 100MB for application
@@ -103,7 +103,28 @@ make -j$(nproc)
 ./goobert
 ```
 
-### Other Distributions
+### macOS (Homebrew)
+
+```bash
+# Install dependencies via Homebrew
+brew install cmake qt@6 mpv pkg-config
+
+# Clone and build
+git clone https://github.com/drzo1dberg/goobert.git
+cd goobert
+mkdir build && cd build
+cmake ..
+make -j$(sysctl -n hw.ncpu)
+
+# Run the app bundle
+open goobert.app
+# Or run directly
+./goobert.app/Contents/MacOS/goobert
+```
+
+**Note:** Works on both Apple Silicon (M1/M2/M3) and Intel Macs.
+
+### Other Linux Distributions
 
 **Arch Linux:**
 ```bash
@@ -402,12 +423,31 @@ qmake6 --version
 sudo apt install qt6-base-dev qt6-opengl-dev
 ```
 
-### OpenGL Errors
+### OpenGL Errors (Linux)
 ```bash
 # Check OpenGL support
 glxinfo | grep "OpenGL version"
 
 # Update graphics drivers if needed
+```
+
+### macOS: Qt6 Not Found
+```bash
+# Ensure Homebrew Qt is linked
+brew link qt@6
+
+# Or specify path manually
+cmake .. -DCMAKE_PREFIX_PATH=$(brew --prefix qt@6)
+```
+
+### macOS: libmpv Not Found
+```bash
+# Verify mpv installation
+brew info mpv
+
+# Check pkg-config
+export PKG_CONFIG_PATH="$(brew --prefix)/lib/pkgconfig"
+pkg-config --modversion mpv
 ```
 
 ### Black Screen / No Video
@@ -449,7 +489,8 @@ GitHub: [@drzo1dberg](https://github.com/drzo1dberg)
 
 ## 🗺️ Roadmap
 
-- [ ] Windows and macOS support
+- [x] macOS support
+- [ ] Windows support
 - [ ] Audio visualization modes
 - [ ] Network stream support (RTSP, HTTP)
 - [ ] Playlist management UI
