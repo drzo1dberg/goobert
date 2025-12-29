@@ -19,7 +19,11 @@ set(SOURCES
     src/mpvwidget.cpp
     src/mpvcontroller.cpp
     src/gridcell.cpp
-    src/controlpanel.cpp
+    src/toolbar.cpp
+    src/sidepanel.cpp
+    src/monitorwidget.cpp
+    src/playlistwidget.cpp
+    src/configpanel.cpp
     src/filescanner.cpp
     src/config.cpp
     src/keymap.cpp
@@ -30,7 +34,11 @@ set(HEADERS
     src/mpvwidget.h
     src/mpvcontroller.h
     src/gridcell.h
-    src/controlpanel.h
+    src/toolbar.h
+    src/sidepanel.h
+    src/monitorwidget.h
+    src/playlistwidget.h
+    src/configpanel.h
     src/filescanner.h
     src/config.h
     src/keymap.h

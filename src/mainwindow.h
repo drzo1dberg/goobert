@@ -6,10 +6,13 @@
 #include <QVector>
 #include <QMap>
 #include <QTimer>
+#include <QLabel>
 #include <memory>
 #include <random>
 #include "gridcell.h"
-#include "controlpanel.h"
+#include "toolbar.h"
+#include "sidepanel.h"
+#include "configpanel.h"
 
 // Constants
 namespace MainWindowConstants {
@@ -79,6 +82,7 @@ private slots:
     void onCustomSource(int row, int col, const QStringList &paths);
     void navigateSelection(int colDelta, int rowDelta);
     void watchdogCheck();
+    void log(const QString &message);
 
 private:
     void setupUi();
@@ -96,7 +100,12 @@ private:
     QSplitter *m_splitter = nullptr;
     QWidget *m_wallContainer = nullptr;
     QGridLayout *m_gridLayout = nullptr;
-    ControlPanel *m_controlPanel = nullptr;
+
+    // New UI components
+    ToolBar *m_toolBar = nullptr;
+    SidePanel *m_sidePanel = nullptr;
+    ConfigPanel *m_configPanel = nullptr;
+    QLabel *m_statusLabel = nullptr;
 
     QVector<GridCell*> m_cells;
     QMap<QPair<int,int>, GridCell*> m_cellMap;

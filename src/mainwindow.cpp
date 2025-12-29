@@ -6,9 +6,12 @@
 #include <QWheelEvent>
 #include <QMouseEvent>
 #include <QVBoxLayout>
+#include <QHBoxLayout>
 #include <QMessageBox>
 #include <QApplication>
 #include <QScreen>
+#include <QDateTime>
+#include <QStatusBar>
 #include <random>
 #include <algorithm>
 #include <utility>
@@ -36,6 +39,16 @@ void MainWindow::setupUi()
 {
     using namespace MainWindowConstants;
 
+    // Main window styling
+    setStyleSheet("QMainWindow { background-color: #1a1a1a; }");
+
+    // Toolbar at top
+    m_toolBar = new ToolBar(this);
+    m_toolBar->installEventFilter(this);
+    m_toolBar->setToolTip(KeyMap::instance().generateTooltip());
+    addToolBar(Qt::TopToolBarArea, m_toolBar);
+
+    // Central widget with horizontal splitter
     m_centralWidget = new QWidget(this);
     setCentralWidget(m_centralWidget);
 
@@ -43,57 +56,70 @@ void MainWindow::setupUi()
     mainLayout->setContentsMargins(0, 0, 0, 0);
     mainLayout->setSpacing(0);
 
-    // Splitter: wall on top, controls on bottom
-    m_splitter = new QSplitter(Qt::Vertical, m_centralWidget);
-    mainLayout->addWidget(m_splitter);
+    // Config panel (collapsible, above splitter)
+    m_configPanel = new ConfigPanel(m_sourceDir);
+    m_configPanel->installEventFilter(this);
+    mainLayout->addWidget(m_configPanel);
 
-    // Wall container
+    // Horizontal splitter: side panel | video wall
+    m_splitter = new QSplitter(Qt::Horizontal, m_centralWidget);
+    m_splitter->setStyleSheet("QSplitter::handle { background-color: #333; }");
+    mainLayout->addWidget(m_splitter, 1);  // stretch factor 1
+
+    // Side panel (left)
+    m_sidePanel = new SidePanel();
+    m_sidePanel->setMinimumWidth(250);
+    m_sidePanel->setMaximumWidth(400);
+    m_splitter->addWidget(m_sidePanel);
+
+    // Wall container (right, main area)
     m_wallContainer = new QWidget(m_splitter);
     m_wallContainer->setStyleSheet("background-color: #0a0a0a;");
     m_gridLayout = new QGridLayout(m_wallContainer);
     m_gridLayout->setContentsMargins(kGridMargin, kGridMargin, kGridMargin, kGridMargin);
     m_gridLayout->setSpacing(kGridSpacing);
-
-    // Control panel
-    m_controlPanel = new ControlPanel(m_sourceDir, m_splitter);
-    m_controlPanel->installEventFilter(this);  // Capture keyboard events
-    // Set tooltip from KeyMap (automatically shows all bindings including duplicates)
-    m_controlPanel->setToolTip(KeyMap::instance().generateTooltip());
-
     m_splitter->addWidget(m_wallContainer);
-    m_splitter->addWidget(m_controlPanel);
 
-    // Set stretch factors: video wall gets 9x more space than controls
-    m_splitter->setStretchFactor(0, kWallStretchFactor);
-    m_splitter->setStretchFactor(1, kControlStretchFactor);
+    // Set stretch factors: side panel fixed, wall expands
+    m_splitter->setStretchFactor(0, 0);  // Side panel doesn't stretch
+    m_splitter->setStretchFactor(1, 1);  // Wall stretches
+    m_splitter->setSizes({280, 1000});
 
-    // Initial sizes: give wall 90% of space
-    m_splitter->setSizes({kInitialWallSize, kInitialControlSize});
+    // Status bar
+    m_statusLabel = new QLabel("Ready");
+    m_statusLabel->setStyleSheet("color: #666; padding: 4px;");
+    statusBar()->addWidget(m_statusLabel, 1);
+    statusBar()->setStyleSheet("QStatusBar { background-color: #1a1a1a; border-top: 1px solid #333; }");
 
-    // Connect control panel signals
-    connect(m_controlPanel, &ControlPanel::startClicked, this, &MainWindow::startGrid);
-    connect(m_controlPanel, &ControlPanel::stopClicked, this, &MainWindow::stopGrid);
-    connect(m_controlPanel, &ControlPanel::fullscreenClicked, this, &MainWindow::toggleFullscreen);
-    connect(m_controlPanel, &ControlPanel::playPauseClicked, this, &MainWindow::playPauseAll);
-    connect(m_controlPanel, &ControlPanel::nextClicked, this, &MainWindow::nextAll);
-    connect(m_controlPanel, &ControlPanel::prevClicked, this, &MainWindow::prevAll);
-    connect(m_controlPanel, &ControlPanel::shuffleClicked, this, &MainWindow::shuffleAll);
-    connect(m_controlPanel, &ControlPanel::muteClicked, this, &MainWindow::muteAll);
-    connect(m_controlPanel, &ControlPanel::volumeChanged, this, &MainWindow::setVolumeAll);
-    connect(m_controlPanel, &ControlPanel::fileRenamed, this, &MainWindow::onFileRenamed);
-    connect(m_controlPanel, &ControlPanel::customSourceRequested, this, &MainWindow::onCustomSource);
-    connect(m_controlPanel, &ControlPanel::gridSizeChanged, this, [this](int rows, int cols) {
+    // Connect toolbar signals
+    connect(m_toolBar, &ToolBar::startClicked, this, &MainWindow::startGrid);
+    connect(m_toolBar, &ToolBar::stopClicked, this, &MainWindow::stopGrid);
+    connect(m_toolBar, &ToolBar::fullscreenClicked, this, &MainWindow::toggleFullscreen);
+    connect(m_toolBar, &ToolBar::playPauseClicked, this, &MainWindow::playPauseAll);
+    connect(m_toolBar, &ToolBar::nextClicked, this, &MainWindow::nextAll);
+    connect(m_toolBar, &ToolBar::prevClicked, this, &MainWindow::prevAll);
+    connect(m_toolBar, &ToolBar::shuffleClicked, this, &MainWindow::shuffleAll);
+    connect(m_toolBar, &ToolBar::muteClicked, this, &MainWindow::muteAll);
+    connect(m_toolBar, &ToolBar::volumeChanged, this, &MainWindow::setVolumeAll);
+
+    // Connect config panel signals
+    connect(m_configPanel, &ConfigPanel::gridSizeChanged, this, [this](int rows, int cols) {
         m_rows = rows;
         m_cols = cols;
     });
+
+    // Connect side panel signals
+    connect(m_sidePanel, &SidePanel::cellSelected, this, &MainWindow::onCellSelected);
+    connect(m_sidePanel, &SidePanel::fileRenamed, this, &MainWindow::onFileRenamed);
+    connect(m_sidePanel, &SidePanel::customSourceRequested, this, &MainWindow::onCustomSource);
 }
 
 void MainWindow::startGrid()
 {
-    m_sourceDir = m_controlPanel->sourceDir();
-    m_rows = m_controlPanel->rows();
-    m_cols = m_controlPanel->cols();
-    QString filter = m_controlPanel->filter();
+    m_sourceDir = m_configPanel->sourceDir();
+    m_rows = m_configPanel->rows();
+    m_cols = m_configPanel->cols();
+    QString filter = m_configPanel->filter();
 
     // Scan for media files with optional filter
     FileScanner scanner;
@@ -110,12 +136,15 @@ void MainWindow::startGrid()
     QString logMsg = filter.isEmpty()
         ? QString("Found %1 files").arg(files.size())
         : QString("Found %1 files (filter: %2)").arg(files.size()).arg(filter);
-    m_controlPanel->log(logMsg);
+    log(logMsg);
 
     clearGrid();
     buildGrid(m_rows, m_cols);
     m_currentFilter = filter;
     m_cellPlaylists.clear();
+
+    // Clear and populate playlist widget
+    m_sidePanel->playlist()->clear();
 
     // Distribute files to cells
     for (int r = 0; r < m_rows; ++r) {
@@ -127,14 +156,16 @@ void MainWindow::startGrid()
                 std::shuffle(shuffled.begin(), shuffled.end(), s_rng);
                 cell->setPlaylist(shuffled);
                 cell->play();
-                // Store playlist for auto-restart
+                // Store playlist for auto-restart and UI
                 m_cellPlaylists[{r, c}] = shuffled;
+                m_sidePanel->playlist()->setCellPlaylist(r, c, shuffled);
             }
         }
     }
 
-    m_controlPanel->setRunning(true);
-    m_controlPanel->log(QString("Started %1x%2 grid").arg(m_cols).arg(m_rows));
+    m_toolBar->setRunning(true);
+    m_configPanel->setEnabled(false);
+    log(QString("Started %1x%2 grid").arg(m_cols).arg(m_rows));
 
     // Auto-select first cell
     if (!m_cells.isEmpty()) {
@@ -164,8 +195,11 @@ void MainWindow::stopGrid()
     m_selectedCell = nullptr;
     m_selectedRow = -1;
     m_selectedCol = -1;
-    m_controlPanel->setRunning(false);
-    m_controlPanel->log("Stopped");
+    m_toolBar->setRunning(false);
+    m_configPanel->setEnabled(true);
+    m_sidePanel->monitor()->clear();
+    m_sidePanel->playlist()->clear();
+    log("Stopped");
 }
 
 void MainWindow::buildGrid(int rows, int cols)
@@ -182,7 +216,14 @@ void MainWindow::buildGrid(int rows, int cols)
 
             connect(cell, &GridCell::selected, this, &MainWindow::onCellSelected);
             connect(cell, &GridCell::doubleClicked, this, &MainWindow::onCellDoubleClicked);
-            connect(cell, &GridCell::fileChanged, m_controlPanel, &ControlPanel::updateCellStatus);
+
+            // Connect to monitor widget
+            connect(cell, &GridCell::fileChanged, m_sidePanel->monitor(), &MonitorWidget::updateCellStatus);
+
+            // Update playlist highlight when file changes
+            connect(cell, &GridCell::fileChanged, this, [this](int row, int col, const QString &path, double, double, bool) {
+                m_sidePanel->playlist()->updateCurrentFile(row, col, path);
+            });
         }
     }
 }
@@ -201,9 +242,6 @@ void MainWindow::clearGrid()
         m_gridLayout->setRowStretch(i, 0);
         m_gridLayout->setColumnStretch(i, 0);
     }
-
-    // Clear monitor table
-    m_controlPanel->clearMonitor();
 }
 
 bool MainWindow::eventFilter(QObject *watched, QEvent *event)
@@ -331,9 +369,12 @@ void MainWindow::toggleFullscreen()
         exitFullscreen();
     } else {
         m_isFullscreen = true;
-        m_controlPanel->hide();
+        m_toolBar->hide();
+        m_configPanel->hide();
+        m_sidePanel->hide();
+        statusBar()->hide();
         showFullScreen();
-        m_controlPanel->log("Fullscreen ON");
+        log("Fullscreen ON");
     }
 }
 
@@ -345,8 +386,11 @@ void MainWindow::exitFullscreen()
     if (m_isFullscreen) {
         m_isFullscreen = false;
         showNormal();
-        m_controlPanel->show();
-        m_controlPanel->log("Fullscreen OFF");
+        m_toolBar->show();
+        m_configPanel->show();
+        m_sidePanel->show();
+        statusBar()->show();
+        log("Fullscreen OFF");
     }
 }
 
@@ -379,7 +423,7 @@ void MainWindow::enterTileFullscreen(int row, int col)
         toggleFullscreen();
     }
 
-    m_controlPanel->log(QString("Tile fullscreen: [%1,%2]").arg(row).arg(col));
+    log(QString("Tile fullscreen: [%1,%2]").arg(row).arg(col));
 }
 
 void MainWindow::exitTileFullscreen()
@@ -411,7 +455,7 @@ void MainWindow::exitTileFullscreen()
 
     m_isTileFullscreen = false;
     m_fullscreenCell = nullptr;
-    m_controlPanel->log("Tile fullscreen OFF");
+    log("Tile fullscreen OFF");
 }
 
 void MainWindow::onCellSelected(int row, int col)
@@ -429,7 +473,7 @@ void MainWindow::onCellSelected(int row, int col)
         // Select new cell
         cell->setSelected(true);
         m_selectedCell = cell;
-        m_controlPanel->setSelectedPath(cell->currentFile());
+        m_statusLabel->setText(QString("Selected: [%1,%2] %3").arg(row).arg(col).arg(cell->currentFile()));
     }
 }
 
@@ -492,7 +536,7 @@ void MainWindow::volumeUpAll()
     using namespace MainWindowConstants;
     m_currentVolume = qMin(100, m_currentVolume + kVolumeStep);
     setVolumeAll(m_currentVolume);
-    m_controlPanel->log(QString("Volume: %1%").arg(m_currentVolume));
+    log(QString("Volume: %1%").arg(m_currentVolume));
 }
 
 void MainWindow::volumeDownAll()
@@ -500,7 +544,7 @@ void MainWindow::volumeDownAll()
     using namespace MainWindowConstants;
     m_currentVolume = qMax(0, m_currentVolume - kVolumeStep);
     setVolumeAll(m_currentVolume);
-    m_controlPanel->log(QString("Volume: %1%").arg(m_currentVolume));
+    log(QString("Volume: %1%").arg(m_currentVolume));
 }
 
 void MainWindow::toggleTileFullscreen()
@@ -642,7 +686,7 @@ void MainWindow::onCustomSource(int row, int col, const QStringList &paths)
     }
 
     if (files.isEmpty()) {
-        m_controlPanel->log(QString("No media found for [%1,%2]").arg(row).arg(col));
+        log(QString("No media found for [%1,%2]").arg(row).arg(col));
         return;
     }
 
@@ -657,9 +701,9 @@ void MainWindow::onCustomSource(int row, int col, const QStringList &paths)
     // Auto loop-inf if single file
     if (files.size() == 1) {
         cell->setLoopFile(true);
-        m_controlPanel->log(QString("[%1,%2]: 1 file, loop=inf").arg(row).arg(col));
+        log(QString("[%1,%2]: 1 file, loop=inf").arg(row).arg(col));
     } else {
-        m_controlPanel->log(QString("[%1,%2]: %3 files").arg(row).arg(col).arg(files.size()));
+        log(QString("[%1,%2]: %3 files").arg(row).arg(col).arg(files.size()));
     }
 }
 
@@ -705,7 +749,7 @@ void MainWindow::watchdogCheck()
                 // Try to restart with stored playlist
                 QStringList playlist = m_cellPlaylists.value({r, c});
                 if (!playlist.isEmpty()) {
-                    m_controlPanel->log(QString("Restarting cell [%1,%2]").arg(r).arg(c));
+                    log(QString("Restarting cell [%1,%2]").arg(r).arg(c));
                     std::shuffle(playlist.begin(), playlist.end(), s_rng);
                     cell->setPlaylist(playlist);
                     cell->play();
@@ -714,4 +758,10 @@ void MainWindow::watchdogCheck()
             }
         }
     }
+}
+
+void MainWindow::log(const QString &message)
+{
+    QString timestamp = QDateTime::currentDateTime().toString("hh:mm:ss");
+    m_statusLabel->setText(QString("[%1] %2").arg(timestamp, message));
 }
