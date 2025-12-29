@@ -65,7 +65,8 @@ void MpvWidget::createMpv()
 
     // Load settings from config
     Config &cfg = Config::instance();
-    mpv_set_option_string(m_mpv, "loop-file", QString::number(cfg.loopCount()).toUtf8().constData());
+    m_originalLoopCount = cfg.loopCount();  // Store for restoring after inf toggle
+    mpv_set_option_string(m_mpv, "loop-file", QString::number(m_originalLoopCount).toUtf8().constData());
     mpv_set_option_string(m_mpv, "image-display-duration", QString::number(cfg.imageDisplayDuration()).toUtf8().constData());
     mpv_set_option_string(m_mpv, "volume", QString::number(cfg.defaultVolume()).toUtf8().constData());
     mpv_set_option_string(m_mpv, "screenshot-directory", cfg.screenshotPath().toUtf8().constData());
@@ -468,7 +469,9 @@ void MpvWidget::setSkipperEnabled(bool enabled)
 // Loop control
 void MpvWidget::setLoopFile(bool loop)
 {
-    setProperty("loop-file", loop ? "inf" : "no");
+    // When toggling off, restore original preset instead of "no"
+    QString value = loop ? "inf" : QString::number(m_originalLoopCount);
+    setProperty("loop-file", value);
     emit loopChanged(loop);
 }
 
@@ -481,7 +484,7 @@ void MpvWidget::toggleLoopFile()
 {
     bool current = isLoopFile();
     setLoopFile(!current);
-    QString msg = current ? "loop-file=no" : "loop-file=inf";
+    QString msg = current ? QString("loop-file=%1").arg(m_originalLoopCount) : "loop-file=inf";
     command(QVariantList{"show-text", msg, "1500"});
 }
 

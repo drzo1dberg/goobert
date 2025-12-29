@@ -131,6 +131,15 @@ void GridCell::nextIfNotLooping()
     m_mpv->next();
 }
 
+void GridCell::prevIfNotLooping()
+{
+    // Grid-sync: skip prev if this cell is looping
+    if (m_looping) {
+        return;
+    }
+    m_mpv->prev();
+}
+
 void GridCell::frameStep()
 {
     m_mpv->frameStep();
@@ -211,10 +220,21 @@ void GridCell::mousePressEvent(QMouseEvent *event)
         event->accept();
         return;
     } else if (event->button() == Qt::ForwardButton) {
-        // Mouse 4 (forward/thumb button): next on this cell only (no select)
-        next();
+        // Mouse 4: next (or prev with Shift)
+        if (event->modifiers() & Qt::ShiftModifier) {
+            prev();
+        } else {
+            next();
+        }
         event->accept();
         return;
+    } else if (event->button() == Qt::BackButton) {
+        // Mouse 5 (back button): Shift+Mouse5 = mute
+        if (event->modifiers() & Qt::ShiftModifier) {
+            toggleMute();
+            event->accept();
+            return;
+        }
     }
     QFrame::mousePressEvent(event);
 }

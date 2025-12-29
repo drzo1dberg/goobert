@@ -102,4 +102,7 @@ private:
 
     // Video transform state
     int m_rotation = 0;
+
+    // Original loop count from config (for restoring after inf toggle)
+    int m_originalLoopCount = 5;
 };

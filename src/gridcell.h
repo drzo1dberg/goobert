@@ -33,8 +33,9 @@ public:
     void toggleLoopFile();
     bool isLoopFile() const;
 
-    // Grid-sync aware next (skips if looping)
+    // Grid-sync aware next/prev (skips if looping)
     void nextIfNotLooping();
+    void prevIfNotLooping();
 
     // Frame stepping
     void frameStep();

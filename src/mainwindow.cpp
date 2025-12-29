@@ -441,14 +441,14 @@ void MainWindow::playPauseAll()
 void MainWindow::nextAll()
 {
     for (GridCell *cell : m_cells) {
-        cell->next();
+        cell->nextIfNotLooping();
     }
 }
 
 void MainWindow::prevAll()
 {
     for (GridCell *cell : m_cells) {
-        cell->prev();
+        cell->prevIfNotLooping();
     }
 }
 
