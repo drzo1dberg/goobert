@@ -177,7 +177,11 @@ src/
 
 ## License
 
-MIT License - Free for commercial and personal use.
+**GPL-3.0** - Free for commercial and personal use.
+
+This project uses [libmpv](https://mpv.io/) which is licensed under GPL. Therefore, Goobert is also distributed under the GNU General Public License v3.0 to comply with libmpv's licensing terms.
+
+See [LICENSE](LICENSE) for full text.
 
 ## Author
 
