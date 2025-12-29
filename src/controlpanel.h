@@ -16,6 +16,7 @@ public:
     explicit ControlPanel(QString sourceDir, QWidget *parent = nullptr);
 
     QString sourceDir() const;
+    QString filter() const;
     int rows() const;
     int cols() const;
 
@@ -49,6 +50,7 @@ private:
     void setCustomSource(int row, int col);
 
     QLineEdit *m_sourceEdit;
+    QLineEdit *m_filterEdit;
     QSpinBox *m_colsSpin;
     QSpinBox *m_rowsSpin;
     QPushButton *m_startBtn;

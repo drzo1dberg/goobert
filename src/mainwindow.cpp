@@ -90,20 +90,29 @@ void MainWindow::startGrid()
     m_sourceDir = m_controlPanel->sourceDir();
     m_rows = m_controlPanel->rows();
     m_cols = m_controlPanel->cols();
+    QString filter = m_controlPanel->filter();
 
-    // Scan for media files
+    // Scan for media files with optional filter
     FileScanner scanner;
-    QStringList files = scanner.scan(m_sourceDir);
+    QStringList files = scanner.scan(m_sourceDir, filter);
 
     if (files.isEmpty()) {
-        QMessageBox::warning(this, "No Media", "No media files found in " + m_sourceDir);
+        QString msg = filter.isEmpty()
+            ? QString("No media files found in %1").arg(m_sourceDir)
+            : QString("No files matching filter '%1' in %2").arg(filter, m_sourceDir);
+        QMessageBox::warning(this, "No Media", msg);
         return;
     }
 
-    m_controlPanel->log(QString("Found %1 files").arg(files.size()));
+    QString logMsg = filter.isEmpty()
+        ? QString("Found %1 files").arg(files.size())
+        : QString("Found %1 files (filter: %2)").arg(files.size()).arg(filter);
+    m_controlPanel->log(logMsg);
 
     clearGrid();
     buildGrid(m_rows, m_cols);
+    m_currentFilter = filter;
+    m_cellPlaylists.clear();
 
     // Distribute files to cells
     for (int r = 0; r < m_rows; ++r) {
@@ -115,6 +124,8 @@ void MainWindow::startGrid()
                 std::shuffle(shuffled.begin(), shuffled.end(), s_rng);
                 cell->setPlaylist(shuffled);
                 cell->play();
+                // Store playlist for auto-restart
+                m_cellPlaylists[{r, c}] = shuffled;
             }
         }
     }
@@ -126,14 +137,27 @@ void MainWindow::startGrid()
     if (!m_cells.isEmpty()) {
         onCellSelected(0, 0);
     }
+
+    // Start watchdog timer (check every 5 seconds)
+    if (!m_watchdogTimer) {
+        m_watchdogTimer = new QTimer(this);
+        connect(m_watchdogTimer, &QTimer::timeout, this, &MainWindow::watchdogCheck);
+    }
+    m_watchdogTimer->start(5000);
 }
 
 void MainWindow::stopGrid()
 {
+    // Stop watchdog
+    if (m_watchdogTimer) {
+        m_watchdogTimer->stop();
+    }
+
     for (GridCell *cell : m_cells) {
         cell->stop();
     }
     clearGrid();
+    m_cellPlaylists.clear();
     m_selectedCell = nullptr;
     m_selectedRow = -1;
     m_selectedCol = -1;
@@ -651,4 +675,32 @@ void MainWindow::navigateSelection(int colDelta, int rowDelta)
 
     // Select new cell
     onCellSelected(newRow, newCol);
+}
+
+void MainWindow::watchdogCheck()
+{
+    // Check each cell and restart if it seems dead (no file playing)
+    for (int r = 0; r < m_rows; ++r) {
+        for (int c = 0; c < m_cols; ++c) {
+            GridCell *cell = m_cellMap.value({r, c});
+            if (!cell) continue;
+
+            // Skip if cell is in tile fullscreen mode (hidden cells are expected to be idle)
+            if (m_isTileFullscreen && cell != m_fullscreenCell) continue;
+
+            // Check if cell has no current file (indicates it may have stopped)
+            QString currentFile = cell->currentFile();
+            if (currentFile.isEmpty()) {
+                // Try to restart with stored playlist
+                QStringList playlist = m_cellPlaylists.value({r, c});
+                if (!playlist.isEmpty()) {
+                    m_controlPanel->log(QString("Restarting cell [%1,%2]").arg(r).arg(c));
+                    std::shuffle(playlist.begin(), playlist.end(), s_rng);
+                    cell->setPlaylist(playlist);
+                    cell->play();
+                    cell->setVolume(m_currentVolume);
+                }
+            }
+        }
+    }
 }

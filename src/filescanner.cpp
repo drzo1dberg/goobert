@@ -45,6 +45,48 @@ QStringList FileScanner::scan(const QString &path) const
     return result;
 }
 
+QStringList FileScanner::scan(const QString &path, const QString &filter) const
+{
+    QStringList files = scan(path);
+    if (filter.isEmpty()) {
+        return files;
+    }
+    return applyFilter(files, filter);
+}
+
+QStringList FileScanner::applyFilter(const QStringList &files, const QString &filter)
+{
+    if (filter.isEmpty()) {
+        return files;
+    }
+
+    // Split filter into AND terms (space-separated)
+    QStringList terms = filter.toLower().split(' ', Qt::SkipEmptyParts);
+    if (terms.isEmpty()) {
+        return files;
+    }
+
+    QStringList result;
+    for (const QString &file : files) {
+        QString filename = QFileInfo(file).fileName().toLower();
+
+        // All terms must match (AND)
+        bool allMatch = true;
+        for (const QString &term : terms) {
+            if (!filename.contains(term)) {
+                allMatch = false;
+                break;
+            }
+        }
+
+        if (allMatch) {
+            result.append(file);
+        }
+    }
+
+    return result;
+}
+
 const QSet<QString> &FileScanner::videoExtensions()
 {
     return s_videoExts;

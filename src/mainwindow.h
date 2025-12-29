@@ -62,6 +62,7 @@ private slots:
     void onFileRenamed(const QString &oldPath, const QString &newPath);
     void onCustomSource(int row, int col, const QStringList &paths);
     void navigateSelection(int colDelta, int rowDelta);
+    void watchdogCheck();
 
 private:
     void setupUi();
@@ -91,6 +92,11 @@ private:
     int m_selectedRow = -1;
     int m_selectedCol = -1;
     int m_currentVolume = 30;  // Track current volume level
+
+    // Watchdog for auto-restart
+    QTimer *m_watchdogTimer = nullptr;
+    QMap<QPair<int,int>, QStringList> m_cellPlaylists;  // Store playlists for restart
+    QString m_currentFilter;
 
     // Random number generator for shuffle operations
     static inline std::mt19937 s_rng{std::random_device{}()};

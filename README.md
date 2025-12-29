@@ -33,6 +33,8 @@
 - **Hardware Acceleration** - Leverages GPU for smooth 4K+ playback
 - **Auto-Loop & Shuffle** - Configurable loop counts and intelligent playlist shuffling
 - **Image Slideshow** - Automatic timing for static images in your wall
+- **Filename Filter** - AND-filter for filenames (e.g. "cat 2024" matches files containing both)
+- **Auto-Restart** - Watchdog automatically restarts cells that stop playing
 
 ### 🎮 Advanced Playback Control
 - **Synchronized Controls** - Play, pause, next, previous across all cells or individually
@@ -149,7 +151,8 @@ goobert
 
 1. **Set Grid Size** - Use the spinboxes to choose rows × columns (e.g., 3×3, 2×4)
 2. **Select Media Source** - Browse to your media directory or enter path directly
-3. **Click "Start"** - Grid initializes and begins playback automatically
+3. **Filter (Optional)** - Enter space-separated terms to filter filenames (AND logic)
+4. **Click "Start"** - Grid initializes and begins playback automatically
 
 ### 3. Control Playback
 

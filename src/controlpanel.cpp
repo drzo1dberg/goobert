@@ -82,6 +82,15 @@ void ControlPanel::setupUi()
     });
     row1->addWidget(browseBtn);
 
+    row1->addSpacing(8);
+
+    row1->addWidget(new QLabel("Filter"));
+    m_filterEdit = new QLineEdit();
+    m_filterEdit->setPlaceholderText("e.g. cat 2024 (AND)");
+    m_filterEdit->setMinimumWidth(120);
+    m_filterEdit->setToolTip("Space-separated AND filter for filenames");
+    row1->addWidget(m_filterEdit);
+
     row1->addSpacing(16);
 
     m_startBtn = new QPushButton("▶ Start");
@@ -180,6 +189,11 @@ QString ControlPanel::sourceDir() const
     return m_sourceEdit->text();
 }
 
+QString ControlPanel::filter() const
+{
+    return m_filterEdit->text().trimmed();
+}
+
 int ControlPanel::rows() const
 {
     return m_rowsSpin->value();
@@ -195,6 +209,7 @@ void ControlPanel::setRunning(bool running)
     m_startBtn->setEnabled(!running);
     m_stopBtn->setEnabled(running);
     m_sourceEdit->setEnabled(!running);
+    m_filterEdit->setEnabled(!running);
     m_colsSpin->setEnabled(!running);
     m_rowsSpin->setEnabled(!running);
 }
@@ -310,12 +325,17 @@ void ControlPanel::clearMonitor()
 
 void ControlPanel::setCustomSource(int row, int col)
 {
-    // Let user choose directory or files
-    QString path = QFileDialog::getExistingDirectory(this,
-        QString("Select source for cell [%1,%2]").arg(row).arg(col),
-        m_sourceEdit->text());
+    bool ok;
+    QString path = QInputDialog::getText(this,
+        QString("Set source for cell [%1,%2]").arg(row).arg(col),
+        "Path:",
+        QLineEdit::Normal,
+        m_sourceEdit->text(),
+        &ok);
 
-    if (path.isEmpty()) return;
+    if (!ok || path.trimmed().isEmpty()) return;
+
+    path = path.trimmed();
 
     // Scan for media files (we'll emit signal and let MainWindow handle scanning)
     emit customSourceRequested(row, col, QStringList{path});
