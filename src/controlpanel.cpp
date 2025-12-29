@@ -299,6 +299,11 @@ void ControlPanel::onTableContextMenu(const QPoint &pos)
     }
 }
 
+void ControlPanel::clearMonitor()
+{
+    m_monitor->setRowCount(0);
+}
+
 void ControlPanel::renameFile(int row, int col, const QString &currentPath)
 {
     QFileInfo fileInfo(currentPath);

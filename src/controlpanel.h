@@ -23,6 +23,7 @@ public:
     void setSelectedPath(const QString &path);
     void log(const QString &message);
     void updateCellStatus(int row, int col, const QString &path, double pos, double dur, bool paused);
+    void clearMonitor();
 
 signals:
     void startClicked();

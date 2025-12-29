@@ -167,6 +167,15 @@ void MainWindow::clearGrid()
     }
     m_cells.clear();
     m_cellMap.clear();
+
+    // Reset all stretch factors (max grid size is 10x10)
+    for (int i = 0; i < 10; ++i) {
+        m_gridLayout->setRowStretch(i, 0);
+        m_gridLayout->setColumnStretch(i, 0);
+    }
+
+    // Clear monitor table
+    m_controlPanel->clearMonitor();
 }
 
 bool MainWindow::eventFilter(QObject *watched, QEvent *event)
