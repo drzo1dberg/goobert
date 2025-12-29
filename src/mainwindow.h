@@ -60,6 +60,7 @@ private slots:
     void onCellSelected(int row, int col);
     void onCellDoubleClicked(int row, int col);
     void onFileRenamed(const QString &oldPath, const QString &newPath);
+    void onCustomSource(int row, int col, const QStringList &paths);
     void navigateSelection(int colDelta, int rowDelta);
 
 private:

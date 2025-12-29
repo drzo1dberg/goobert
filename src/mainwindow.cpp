@@ -78,6 +78,7 @@ void MainWindow::setupUi()
     connect(m_controlPanel, &ControlPanel::muteClicked, this, &MainWindow::muteAll);
     connect(m_controlPanel, &ControlPanel::volumeChanged, this, &MainWindow::setVolumeAll);
     connect(m_controlPanel, &ControlPanel::fileRenamed, this, &MainWindow::onFileRenamed);
+    connect(m_controlPanel, &ControlPanel::customSourceRequested, this, &MainWindow::onCustomSource);
     connect(m_controlPanel, &ControlPanel::gridSizeChanged, this, [this](int rows, int cols) {
         m_rows = rows;
         m_cols = cols;
@@ -590,6 +591,40 @@ void MainWindow::onFileRenamed(const QString &oldPath, const QString &newPath)
     // Update all cells' playlists
     for (GridCell *cell : m_cells) {
         cell->updatePlaylistPath(oldPath, newPath);
+    }
+}
+
+void MainWindow::onCustomSource(int row, int col, const QStringList &paths)
+{
+    GridCell *cell = m_cellMap.value({row, col});
+    if (!cell) return;
+
+    // Scan for media files
+    FileScanner scanner;
+    QStringList files;
+    for (const QString &path : paths) {
+        files.append(scanner.scan(path));
+    }
+
+    if (files.isEmpty()) {
+        m_controlPanel->log(QString("No media found for [%1,%2]").arg(row).arg(col));
+        return;
+    }
+
+    // Shuffle files
+    std::shuffle(files.begin(), files.end(), s_rng);
+
+    // Set playlist and play
+    cell->setPlaylist(files);
+    cell->play();
+    cell->setVolume(m_currentVolume);
+
+    // Auto loop-inf if single file
+    if (files.size() == 1) {
+        cell->setLoopFile(true);
+        m_controlPanel->log(QString("[%1,%2]: 1 file, loop=inf").arg(row).arg(col));
+    } else {
+        m_controlPanel->log(QString("[%1,%2]: %3 files").arg(row).arg(col).arg(files.size()));
     }
 }
 

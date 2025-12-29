@@ -107,6 +107,11 @@ void GridCell::unmute()
     m_mpv->unmute();
 }
 
+void GridCell::setLoopFile(bool loop)
+{
+    m_mpv->setLoopFile(loop);
+}
+
 void GridCell::toggleLoopFile()
 {
     m_mpv->toggleLoopFile();

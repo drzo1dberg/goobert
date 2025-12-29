@@ -289,6 +289,8 @@ void ControlPanel::onTableContextMenu(const QPoint &pos)
     QMenu menu(this);
     QAction *copyPathAction = menu.addAction("Copy path");
     QAction *renameAction = menu.addAction("Rename file...");
+    menu.addSeparator();
+    QAction *customSourceAction = menu.addAction("Set custom source...");
 
     QAction *selected = menu.exec(m_monitor->viewport()->mapToGlobal(pos));
     if (selected == copyPathAction) {
@@ -296,12 +298,28 @@ void ControlPanel::onTableContextMenu(const QPoint &pos)
         log("Copied path to clipboard");
     } else if (selected == renameAction) {
         renameFile(cellRow, cellCol, fullPath);
+    } else if (selected == customSourceAction) {
+        setCustomSource(cellRow, cellCol);
     }
 }
 
 void ControlPanel::clearMonitor()
 {
     m_monitor->setRowCount(0);
+}
+
+void ControlPanel::setCustomSource(int row, int col)
+{
+    // Let user choose directory or files
+    QString path = QFileDialog::getExistingDirectory(this,
+        QString("Select source for cell [%1,%2]").arg(row).arg(col),
+        m_sourceEdit->text());
+
+    if (path.isEmpty()) return;
+
+    // Scan for media files (we'll emit signal and let MainWindow handle scanning)
+    emit customSourceRequested(row, col, QStringList{path});
+    log(QString("Custom source for [%1,%2]: %3").arg(row).arg(col).arg(path));
 }
 
 void ControlPanel::renameFile(int row, int col, const QString &currentPath)

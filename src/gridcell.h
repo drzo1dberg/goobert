@@ -29,6 +29,7 @@ public:
     void unmute();
 
     // Loop control
+    void setLoopFile(bool loop);
     void toggleLoopFile();
     bool isLoopFile() const;
 

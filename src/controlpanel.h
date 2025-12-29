@@ -37,6 +37,7 @@ signals:
     void volumeChanged(int volume);
     void gridSizeChanged(int rows, int cols);
     void fileRenamed(const QString &oldPath, const QString &newPath);
+    void customSourceRequested(int row, int col, const QStringList &files);
 
 private slots:
     void onTableContextMenu(const QPoint &pos);
@@ -45,6 +46,7 @@ private:
     void setupUi();
     QString formatTime(double seconds) const;
     void renameFile(int row, int col, const QString &currentPath);
+    void setCustomSource(int row, int col);
 
     QLineEdit *m_sourceEdit;
     QSpinBox *m_colsSpin;
