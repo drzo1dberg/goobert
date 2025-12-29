@@ -217,7 +217,7 @@ nano ~/.config/goobert/goobert.ini
 | Shortcut | Action |
 |----------|--------|
 | `Space` / `P` | Play/Pause all cells |
-| `Shift+N` | Next all cells |
+| `E` | Next all cells |
 | `Q` | Shuffle all playlists |
 | `M` | Mute all cells |
 | `U` | Volume up (+5%) |
@@ -235,6 +235,8 @@ nano ~/.config/goobert/goobert.ini
 | `B` | Frame step backward |
 | `T` | Screenshot (auto-copy path to clipboard) |
 | `L` | Toggle loop on selected cell |
+| `,` | Previous in playlist |
+| `.` | Next in playlist |
 | `R` | Rotate video 90° |
 | `+` / `-` | Zoom in/out |
 

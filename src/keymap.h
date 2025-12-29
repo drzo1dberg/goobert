@@ -29,6 +29,8 @@ public:
 
         // Selected cell actions
         FullscreenSelected,
+        NextSelected,
+        PrevSelected,
         SeekForward,
         SeekBackward,
         FrameStepForward,

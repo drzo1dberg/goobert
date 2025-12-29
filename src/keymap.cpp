@@ -43,7 +43,7 @@ void KeyMap::setupDefaultBindings()
     m_bindings[{Qt::Key_N, Qt::NoModifier}] = Action::FrameStepForward;
 
     // Grid controls (S conflicts with navigation, using Q for shuffle)
-    m_bindings[{Qt::Key_N, Qt::ShiftModifier}] = Action::NextAll;  // Shift+N for next all
+    m_bindings[{Qt::Key_E, Qt::NoModifier}] = Action::NextAll;  // E for next all
     m_bindings[{Qt::Key_Q, Qt::NoModifier}] = Action::ShuffleAll;
     m_bindings[{Qt::Key_X, Qt::NoModifier}] = Action::ShuffleThenNextAll;
 
@@ -54,6 +54,8 @@ void KeyMap::setupDefaultBindings()
 
     // Selected cell controls
     m_bindings[{Qt::Key_L, Qt::NoModifier}] = Action::ToggleLoop;
+    m_bindings[{Qt::Key_Comma, Qt::NoModifier}] = Action::PrevSelected;   // , for prev in playlist
+    m_bindings[{Qt::Key_Period, Qt::NoModifier}] = Action::NextSelected;  // . for next in playlist
     m_bindings[{Qt::Key_Z, Qt::NoModifier}] = Action::ZoomIn;
     m_bindings[{Qt::Key_Z, Qt::ShiftModifier}] = Action::ZoomOut;
     m_bindings[{Qt::Key_R, Qt::ControlModifier}] = Action::Rotate;
@@ -78,6 +80,8 @@ void KeyMap::setupDefaultBindings()
     m_descriptions[Action::FrameStepForward] = "Frame step forward";
     m_descriptions[Action::FrameStepBackward] = "Frame step backward";
     m_descriptions[Action::ToggleLoop] = "Toggle loop on selected";
+    m_descriptions[Action::NextSelected] = "Next in selected playlist";
+    m_descriptions[Action::PrevSelected] = "Prev in selected playlist";
     m_descriptions[Action::ZoomIn] = "Zoom in";
     m_descriptions[Action::ZoomOut] = "Zoom out";
     m_descriptions[Action::Rotate] = "Rotate video";
@@ -161,6 +165,8 @@ QString KeyMap::generateTooltip() const
     tooltip += QString("  %1 - %2\n").arg(getKeysForAction(Action::FrameStepBackward).join("/")).arg(getActionDescription(Action::FrameStepBackward));
     tooltip += QString("  %1 - %2\n").arg(getKeysForAction(Action::Screenshot).join("/")).arg(getActionDescription(Action::Screenshot));
     tooltip += QString("  %1 - %2\n").arg(getKeysForAction(Action::ToggleLoop).join("/")).arg(getActionDescription(Action::ToggleLoop));
+    tooltip += QString("  %1 - %2\n").arg(getKeysForAction(Action::NextSelected).join("/")).arg(getActionDescription(Action::NextSelected));
+    tooltip += QString("  %1 - %2\n").arg(getKeysForAction(Action::PrevSelected).join("/")).arg(getActionDescription(Action::PrevSelected));
     tooltip += QString("  %1 - %2\n").arg(getKeysForAction(Action::ZoomIn).join("/")).arg(getActionDescription(Action::ZoomIn));
     tooltip += QString("  %1 - %2\n").arg(getKeysForAction(Action::ZoomOut).join("/")).arg(getActionDescription(Action::ZoomOut));
     tooltip += QString("  %1 - %2\n").arg(getKeysForAction(Action::Rotate).join("/")).arg(getActionDescription(Action::Rotate));

@@ -296,6 +296,12 @@ void MainWindow::keyPressEvent(QKeyEvent *event)
     case KeyMap::Action::ToggleLoop:
         toggleLoopSelected();
         break;
+    case KeyMap::Action::NextSelected:
+        if (m_selectedCell) m_selectedCell->next();
+        break;
+    case KeyMap::Action::PrevSelected:
+        if (m_selectedCell) m_selectedCell->prev();
+        break;
     case KeyMap::Action::ZoomIn:
         zoomInSelected();
         break;
