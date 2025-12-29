@@ -11,13 +11,30 @@
 #include "gridcell.h"
 #include "controlpanel.h"
 
+// Constants
+namespace MainWindowConstants {
+    inline constexpr int kDefaultWidth = 1500;
+    inline constexpr int kDefaultHeight = 900;
+    inline constexpr int kWallStretchFactor = 9;
+    inline constexpr int kControlStretchFactor = 1;
+    inline constexpr int kInitialWallSize = 900;
+    inline constexpr int kInitialControlSize = 100;
+    inline constexpr int kGridMargin = 2;
+    inline constexpr int kGridSpacing = 2;
+    inline constexpr int kMaxGridSize = 10;
+    inline constexpr int kWatchdogIntervalMs = 5000;
+    inline constexpr int kShuffleNextDelayMs = 200;
+    inline constexpr int kVolumeStep = 5;
+    inline constexpr double kSeekStepSeconds = 5.0;
+}
+
 class MainWindow : public QMainWindow
 {
     Q_OBJECT
 
 public:
     explicit MainWindow(QString sourceDir, QWidget *parent = nullptr);
-    ~MainWindow();
+    ~MainWindow() override;
 
     // Non-copyable
     MainWindow(const MainWindow&) = delete;
@@ -37,10 +54,9 @@ private slots:
 
     void playPauseAll();
     void nextAll();
-    void nextAllIfNotLooping();  // Grid-sync aware
     void prevAll();
     void shuffleAll();
-    void shuffleThenNextAll();   // Chained: shuffle, delay, next
+    void shuffleThenNextAll();
     void muteAll();
     void setVolumeAll(int volume);
     void volumeUpAll();
@@ -70,7 +86,7 @@ private:
     void clearGrid();
     void enterTileFullscreen(int row, int col);
     void exitTileFullscreen();
-    GridCell* selectedCell() const;
+    [[nodiscard]] GridCell* selectedCell() const noexcept;
 
     QString m_sourceDir;
     int m_rows = 3;
@@ -91,11 +107,11 @@ private:
     GridCell *m_selectedCell = nullptr;
     int m_selectedRow = -1;
     int m_selectedCol = -1;
-    int m_currentVolume = 30;  // Track current volume level
+    int m_currentVolume = 30;
 
     // Watchdog for auto-restart
     QTimer *m_watchdogTimer = nullptr;
-    QMap<QPair<int,int>, QStringList> m_cellPlaylists;  // Store playlists for restart
+    QMap<QPair<int,int>, QStringList> m_cellPlaylists;
     QString m_currentFilter;
 
     // Random number generator for shuffle operations

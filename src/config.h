@@ -6,41 +6,41 @@
 class Config
 {
 public:
-    static Config& instance();
+    [[nodiscard]] static Config& instance();
 
     // Playback settings
-    int loopCount() const { return m_loopCount; }
+    [[nodiscard]] int loopCount() const noexcept { return m_loopCount; }
     void setLoopCount(int count) { m_loopCount = count; save(); }
 
-    int defaultVolume() const { return m_defaultVolume; }
+    [[nodiscard]] int defaultVolume() const noexcept { return m_defaultVolume; }
     void setDefaultVolume(int vol) { m_defaultVolume = vol; save(); }
 
-    double imageDisplayDuration() const { return m_imageDisplayDuration; }
+    [[nodiscard]] double imageDisplayDuration() const noexcept { return m_imageDisplayDuration; }
     void setImageDisplayDuration(double dur) { m_imageDisplayDuration = dur; save(); }
 
     // Grid settings
-    int defaultRows() const { return m_defaultRows; }
+    [[nodiscard]] int defaultRows() const noexcept { return m_defaultRows; }
     void setDefaultRows(int rows) { m_defaultRows = rows; save(); }
 
-    int defaultCols() const { return m_defaultCols; }
+    [[nodiscard]] int defaultCols() const noexcept { return m_defaultCols; }
     void setDefaultCols(int cols) { m_defaultCols = cols; save(); }
 
     // Path settings
-    QString defaultMediaPath() const { return m_defaultMediaPath; }
+    [[nodiscard]] QString defaultMediaPath() const { return m_defaultMediaPath; }
     void setDefaultMediaPath(const QString &path) { m_defaultMediaPath = path; save(); }
 
-    QString screenshotPath() const { return m_screenshotPath; }
+    [[nodiscard]] QString screenshotPath() const { return m_screenshotPath; }
     void setScreenshotPath(const QString &path) { m_screenshotPath = path; save(); }
 
     // Skipper settings
-    bool skipperEnabled() const { return m_skipperEnabled; }
+    [[nodiscard]] bool skipperEnabled() const noexcept { return m_skipperEnabled; }
     void setSkipperEnabled(bool enabled) { m_skipperEnabled = enabled; save(); }
 
-    double skipPercent() const { return m_skipPercent; }
+    [[nodiscard]] double skipPercent() const noexcept { return m_skipPercent; }
     void setSkipPercent(double percent) { m_skipPercent = percent; save(); }
 
     // Seek amount (for horizontal scroll)
-    int seekAmountSeconds() const { return m_seekAmountSeconds; }
+    [[nodiscard]] int seekAmountSeconds() const noexcept { return m_seekAmountSeconds; }
     void setSeekAmountSeconds(int seconds) { m_seekAmountSeconds = seconds; save(); }
 
     void load();

@@ -3,6 +3,7 @@
 #include <QVBoxLayout>
 #include <QMouseEvent>
 #include <QWheelEvent>
+#include <cmath>
 
 GridCell::GridCell(int row, int col, QWidget *parent)
     : QFrame(parent)
@@ -34,9 +35,6 @@ GridCell::GridCell(int row, int col, QWidget *parent)
     });
 }
 
-GridCell::~GridCell()
-{
-}
 
 void GridCell::setPlaylist(const QStringList &files)
 {
@@ -117,7 +115,7 @@ void GridCell::toggleLoopFile()
     m_mpv->toggleLoopFile();
 }
 
-bool GridCell::isLoopFile() const
+bool GridCell::isLoopFile() const noexcept
 {
     return m_looping;
 }
@@ -190,17 +188,17 @@ QString GridCell::currentFile() const
     return m_currentFile;
 }
 
-double GridCell::position() const
+double GridCell::position() const noexcept
 {
     return m_position;
 }
 
-double GridCell::duration() const
+double GridCell::duration() const noexcept
 {
     return m_duration;
 }
 
-bool GridCell::isPaused() const
+bool GridCell::isPaused() const noexcept
 {
     return m_paused;
 }
@@ -285,10 +283,9 @@ void GridCell::onPositionChanged(double pos)
 {
     m_position = pos;
 
-    // Throttle auf ~4Hz, sonst zu viele UI-Updates
-    static constexpr double kMinIntervalSec = 0.25;
-
-    if (m_lastEmitPos < 0 || (m_position - m_lastEmitPos) >= kMinIntervalSec || (m_lastEmitPos - m_position) >= kMinIntervalSec) {
+    // Throttle to ~4Hz to avoid excessive UI updates
+    using namespace GridCellConstants;
+    if (m_lastEmitPos < 0 || std::abs(m_position - m_lastEmitPos) >= kPositionEmitInterval) {
         m_lastEmitPos = m_position;
         if (!m_currentFile.isEmpty()) {
             emit fileChanged(m_row, m_col, m_currentFile, m_position, m_duration, m_paused);

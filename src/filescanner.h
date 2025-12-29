@@ -6,18 +6,22 @@
 class FileScanner
 {
 public:
-    FileScanner();
+    FileScanner() = default;
 
-    QStringList scan(const QString &path) const;
-    QStringList scan(const QString &path, const QString &filter) const;
+    [[nodiscard]] QStringList scan(const QString &path) const;
+    [[nodiscard]] QStringList scan(const QString &path, const QString &filter) const;
 
     // Filter: space-separated AND terms, case-insensitive
-    static QStringList applyFilter(const QStringList &files, const QString &filter);
+    [[nodiscard]] static QStringList applyFilter(const QStringList &files, const QString &filter);
 
-    static const QSet<QString> &videoExtensions();
-    static const QSet<QString> &imageExtensions();
+    [[nodiscard]] static const QSet<QString>& videoExtensions() noexcept;
+    [[nodiscard]] static const QSet<QString>& imageExtensions() noexcept;
 
 private:
-    static QSet<QString> s_videoExts;
-    static QSet<QString> s_imageExts;
+    static inline const QSet<QString> s_videoExts = {
+        "mkv", "mp4", "avi", "mov", "m4v", "flv", "wmv", "mpg", "mpeg", "ts", "ogv", "webm"
+    };
+    static inline const QSet<QString> s_imageExts = {
+        "jpg", "jpeg", "png", "webp", "avif", "bmp", "tif", "tiff", "gif"
+    };
 };

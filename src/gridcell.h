@@ -3,16 +3,21 @@
 #include <QFrame>
 #include "mpvwidget.h"
 
+// Constants
+namespace GridCellConstants {
+    inline constexpr double kPositionEmitInterval = 0.25;  // ~4Hz throttle
+}
+
 class GridCell : public QFrame
 {
     Q_OBJECT
 
 public:
     explicit GridCell(int row, int col, QWidget *parent = nullptr);
-    ~GridCell();
+    ~GridCell() = default;
 
-    int row() const { return m_row; }
-    int col() const { return m_col; }
+    [[nodiscard]] int row() const noexcept { return m_row; }
+    [[nodiscard]] int col() const noexcept { return m_col; }
 
     void setPlaylist(const QStringList &files);
     void setSelected(bool selected);
@@ -31,7 +36,7 @@ public:
     // Loop control
     void setLoopFile(bool loop);
     void toggleLoopFile();
-    bool isLoopFile() const;
+    [[nodiscard]] bool isLoopFile() const noexcept;
 
     // Grid-sync aware next/prev (skips if looping)
     void nextIfNotLooping();
@@ -55,10 +60,10 @@ public:
     // Playlist management
     void updatePlaylistPath(const QString &oldPath, const QString &newPath);
 
-    QString currentFile() const;
-    double position() const;
-    double duration() const;
-    bool isPaused() const;
+    [[nodiscard]] QString currentFile() const;
+    [[nodiscard]] double position() const noexcept;
+    [[nodiscard]] double duration() const noexcept;
+    [[nodiscard]] bool isPaused() const noexcept;
 
 signals:
     void selected(int row, int col);
@@ -78,11 +83,11 @@ private slots:
 private:
     int m_row;
     int m_col;
-    MpvWidget *m_mpv;
+    MpvWidget *m_mpv = nullptr;
     QString m_currentFile;
-    double m_position = 0;
-    double m_duration = 0;
+    double m_position = 0.0;
+    double m_duration = 0.0;
     bool m_paused = false;
     bool m_looping = false;
-    double m_lastEmitPos = -1.0;  // Per-instance throttle state
+    double m_lastEmitPos = -1.0;
 };

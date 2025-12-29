@@ -2,18 +2,8 @@
 #include <QDir>
 #include <QDirIterator>
 #include <QFileInfo>
-
-QSet<QString> FileScanner::s_videoExts = {
-    "mkv", "mp4", "avi", "mov", "m4v", "flv", "wmv", "mpg", "mpeg", "ts", "ogv", "webm"
-};
-
-QSet<QString> FileScanner::s_imageExts = {
-    "jpg", "jpeg", "png", "webp", "avif", "bmp", "tif", "tiff", "gif"
-};
-
-FileScanner::FileScanner()
-{
-}
+#include <algorithm>
+#include <ranges>
 
 QStringList FileScanner::scan(const QString &path) const
 {
@@ -25,8 +15,7 @@ QStringList FileScanner::scan(const QString &path) const
     }
 
     if (fi.isFile()) {
-        QString ext = fi.suffix().toLower();
-        if (s_videoExts.contains(ext) || s_imageExts.contains(ext)) {
+        if (QString ext = fi.suffix().toLower(); s_videoExts.contains(ext) || s_imageExts.contains(ext)) {
             result.append(fi.absoluteFilePath());
         }
         return result;
@@ -35,8 +24,7 @@ QStringList FileScanner::scan(const QString &path) const
     QDirIterator it(path, QDir::Files, QDirIterator::Subdirectories);
     while (it.hasNext()) {
         it.next();
-        QString ext = it.fileInfo().suffix().toLower();
-        if (s_videoExts.contains(ext) || s_imageExts.contains(ext)) {
+        if (QString ext = it.fileInfo().suffix().toLower(); s_videoExts.contains(ext) || s_imageExts.contains(ext)) {
             result.append(it.filePath());
         }
     }
@@ -48,10 +36,7 @@ QStringList FileScanner::scan(const QString &path) const
 QStringList FileScanner::scan(const QString &path, const QString &filter) const
 {
     QStringList files = scan(path);
-    if (filter.isEmpty()) {
-        return files;
-    }
-    return applyFilter(files, filter);
+    return filter.isEmpty() ? files : applyFilter(files, filter);
 }
 
 QStringList FileScanner::applyFilter(const QStringList &files, const QString &filter)
@@ -61,23 +46,19 @@ QStringList FileScanner::applyFilter(const QStringList &files, const QString &fi
     }
 
     // Split filter into AND terms (space-separated)
-    QStringList terms = filter.toLower().split(' ', Qt::SkipEmptyParts);
+    const QStringList terms = filter.toLower().split(' ', Qt::SkipEmptyParts);
     if (terms.isEmpty()) {
         return files;
     }
 
     QStringList result;
     for (const QString &file : files) {
-        QString filename = QFileInfo(file).fileName().toLower();
+        const QString filename = QFileInfo(file).fileName().toLower();
 
-        // All terms must match (AND)
-        bool allMatch = true;
-        for (const QString &term : terms) {
-            if (!filename.contains(term)) {
-                allMatch = false;
-                break;
-            }
-        }
+        // All terms must match (AND) - using std::ranges::all_of
+        bool allMatch = std::ranges::all_of(terms, [&filename](const QString &term) {
+            return filename.contains(term);
+        });
 
         if (allMatch) {
             result.append(file);
@@ -87,12 +68,12 @@ QStringList FileScanner::applyFilter(const QStringList &files, const QString &fi
     return result;
 }
 
-const QSet<QString> &FileScanner::videoExtensions()
+const QSet<QString>& FileScanner::videoExtensions() noexcept
 {
     return s_videoExts;
 }
 
-const QSet<QString> &FileScanner::imageExtensions()
+const QSet<QString>& FileScanner::imageExtensions() noexcept
 {
     return s_imageExts;
 }

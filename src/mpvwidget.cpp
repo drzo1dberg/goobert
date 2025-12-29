@@ -21,7 +21,8 @@ static void wakeup(void *ctx)
 MpvWidget::MpvWidget(QWidget *parent)
     : QOpenGLWidget(parent)
 {
-    setMinimumSize(100, 100);
+    using namespace MpvConstants;
+    setMinimumSize(kMinWidgetSize, kMinWidgetSize);
 
     setUpdateBehavior(QOpenGLWidget::NoPartialUpdate);
     setAutoFillBackground(false);
@@ -226,12 +227,11 @@ void MpvWidget::handleMpvEvent(mpv_event *event)
         // Use delay (like original Lua script) to let decoder stabilize
         if (m_skipperEnabled && !path.isEmpty() && !m_seenFiles.contains(path)) {
             m_seenFiles.insert(path);
-            QTimer::singleShot(150, this, [this]() {
-                double dur = getProperty("duration").toDouble();
-                if (dur > 0) {
+            QTimer::singleShot(MpvConstants::kSkipperDelayMs, this, [this]() {
+                if (double dur = getProperty("duration").toDouble(); dur > 0) {
                     double target = dur * m_skipPercent;
                     command(QVariantList{"seek", QString::number(target), "absolute", "keyframes"});
-                    command(QVariantList{"show-text", QString("start@%1%").arg(int(m_skipPercent * 100)), "1500"});
+                    command(QVariantList{"show-text", QString("start@%1%").arg(int(m_skipPercent * 100)), QString::number(MpvConstants::kOsdDurationMs)});
                 }
             });
         }
@@ -485,7 +485,7 @@ void MpvWidget::toggleLoopFile()
     bool current = isLoopFile();
     setLoopFile(!current);
     QString msg = current ? QString("loop-file=%1").arg(m_originalLoopCount) : "loop-file=inf";
-    command(QVariantList{"show-text", msg, "1500"});
+    command(QVariantList{"show-text", msg, QString::number(MpvConstants::kOsdDurationMs)});
 }
 
 // Frame stepping
@@ -502,21 +502,22 @@ void MpvWidget::frameBackStep()
 // Video transforms
 void MpvWidget::rotateVideo()
 {
-    m_rotation = (m_rotation + 90) % 360;
+    using namespace MpvConstants;
+    m_rotation = (m_rotation + kRotationStep) % 360;
     setProperty("video-rotate", m_rotation);
-    command(QVariantList{"show-text", QString("rotate: %1°").arg(m_rotation), "1500"});
+    command(QVariantList{"show-text", QString("rotate: %1°").arg(m_rotation), QString::number(kOsdDurationMs)});
 }
 
 void MpvWidget::zoomIn()
 {
     double zoom = getProperty("video-zoom").toDouble();
-    setProperty("video-zoom", zoom + 0.1);
+    setProperty("video-zoom", zoom + MpvConstants::kZoomStep);
 }
 
 void MpvWidget::zoomOut()
 {
     double zoom = getProperty("video-zoom").toDouble();
-    setProperty("video-zoom", zoom - 0.1);
+    setProperty("video-zoom", zoom - MpvConstants::kZoomStep);
 }
 
 // Screenshot
@@ -530,7 +531,7 @@ void MpvWidget::screenshot()
     command(QVariantList{"screenshot"});
 
     // Wait a bit for the file to be written, then find the newest screenshot
-    QTimer::singleShot(100, this, [screenshotDir]() {
+    QTimer::singleShot(MpvConstants::kScreenshotDelayMs, this, [screenshotDir]() {
         QDir dir(screenshotDir);
         if (!dir.exists()) return;
 

@@ -6,17 +6,28 @@
 #include <mpv/render_gl.h>
 #include <functional>
 
+// Constants
+namespace MpvConstants {
+    inline constexpr int kMinWidgetSize = 100;
+    inline constexpr int kSkipperDelayMs = 150;
+    inline constexpr int kScreenshotDelayMs = 100;
+    inline constexpr int kOsdDurationMs = 1500;
+    inline constexpr double kDefaultSkipPercent = 0.33;
+    inline constexpr double kZoomStep = 0.1;
+    inline constexpr int kRotationStep = 90;
+}
+
 class MpvWidget : public QOpenGLWidget
 {
     Q_OBJECT
 
 public:
     explicit MpvWidget(QWidget *parent = nullptr);
-    ~MpvWidget();
+    ~MpvWidget() override;
 
     void command(const QVariant &args);
     void setProperty(const QString &name, const QVariant &value);
-    QVariant getProperty(const QString &name) const;
+    [[nodiscard]] QVariant getProperty(const QString &name) const;
 
     void loadFile(const QString &file);
     void loadPlaylist(const QStringList &files);
@@ -34,21 +45,21 @@ public:
     void mute();
     void unmute();
 
-    QString currentFile() const;
-    double position() const;
-    double duration() const;
-    bool isPaused() const;
-    bool isMuted() const;
+    [[nodiscard]] QString currentFile() const;
+    [[nodiscard]] double position() const;
+    [[nodiscard]] double duration() const;
+    [[nodiscard]] bool isPaused() const;
+    [[nodiscard]] bool isMuted() const;
 
     // Skipper: seek to percentage on file load
     void setSkipPercent(double percent);
-    double skipPercent() const { return m_skipPercent; }
+    [[nodiscard]] double skipPercent() const noexcept { return m_skipPercent; }
     void setSkipperEnabled(bool enabled);
-    bool isSkipperEnabled() const { return m_skipperEnabled; }
+    [[nodiscard]] bool isSkipperEnabled() const noexcept { return m_skipperEnabled; }
 
     // Loop control
     void setLoopFile(bool loop);
-    bool isLoopFile() const;
+    [[nodiscard]] bool isLoopFile() const;
     void toggleLoopFile();
 
     // Frame stepping
@@ -93,12 +104,12 @@ private:
     bool m_initialized = false;
     QList<QVariantList> m_pendingCommands;
     QStringList m_pendingPlaylist;
-    QStringList m_currentPlaylist;  // Store current playlist for rename support
+    QStringList m_currentPlaylist;
 
     // Skipper state
-    double m_skipPercent = 0.33;
+    double m_skipPercent = MpvConstants::kDefaultSkipPercent;
     bool m_skipperEnabled = true;
-	QSet<QString> m_seenFiles;
+    QSet<QString> m_seenFiles;
 
     // Video transform state
     int m_rotation = 0;

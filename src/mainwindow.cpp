@@ -17,11 +17,12 @@ MainWindow::MainWindow(QString sourceDir, QWidget *parent)
     : QMainWindow(parent)
     , m_sourceDir(std::move(sourceDir))
 {
+    using namespace MainWindowConstants;
     Config &cfg = Config::instance();
     m_currentVolume = cfg.defaultVolume();
 
     setWindowTitle(QString("Goobert %1").arg(GOOBERT_VERSION));
-    resize(1500, 900);
+    resize(kDefaultWidth, kDefaultHeight);
 
     setupUi();
 }
@@ -33,6 +34,8 @@ MainWindow::~MainWindow()
 
 void MainWindow::setupUi()
 {
+    using namespace MainWindowConstants;
+
     m_centralWidget = new QWidget(this);
     setCentralWidget(m_centralWidget);
 
@@ -48,8 +51,8 @@ void MainWindow::setupUi()
     m_wallContainer = new QWidget(m_splitter);
     m_wallContainer->setStyleSheet("background-color: #0a0a0a;");
     m_gridLayout = new QGridLayout(m_wallContainer);
-    m_gridLayout->setContentsMargins(2, 2, 2, 2);
-    m_gridLayout->setSpacing(2);
+    m_gridLayout->setContentsMargins(kGridMargin, kGridMargin, kGridMargin, kGridMargin);
+    m_gridLayout->setSpacing(kGridSpacing);
 
     // Control panel
     m_controlPanel = new ControlPanel(m_sourceDir, m_splitter);
@@ -61,11 +64,11 @@ void MainWindow::setupUi()
     m_splitter->addWidget(m_controlPanel);
 
     // Set stretch factors: video wall gets 9x more space than controls
-    m_splitter->setStretchFactor(0, 9);  // Wall
-    m_splitter->setStretchFactor(1, 1);  // Controls
+    m_splitter->setStretchFactor(0, kWallStretchFactor);
+    m_splitter->setStretchFactor(1, kControlStretchFactor);
 
     // Initial sizes: give wall 90% of space
-    m_splitter->setSizes({900, 100});
+    m_splitter->setSizes({kInitialWallSize, kInitialControlSize});
 
     // Connect control panel signals
     connect(m_controlPanel, &ControlPanel::startClicked, this, &MainWindow::startGrid);
@@ -138,12 +141,12 @@ void MainWindow::startGrid()
         onCellSelected(0, 0);
     }
 
-    // Start watchdog timer (check every 5 seconds)
+    // Start watchdog timer
     if (!m_watchdogTimer) {
         m_watchdogTimer = new QTimer(this);
         connect(m_watchdogTimer, &QTimer::timeout, this, &MainWindow::watchdogCheck);
     }
-    m_watchdogTimer->start(5000);
+    m_watchdogTimer->start(MainWindowConstants::kWatchdogIntervalMs);
 }
 
 void MainWindow::stopGrid()
@@ -193,8 +196,8 @@ void MainWindow::clearGrid()
     m_cells.clear();
     m_cellMap.clear();
 
-    // Reset all stretch factors (max grid size is 10x10)
-    for (int i = 0; i < 10; ++i) {
+    // Reset all stretch factors
+    for (int i = 0; i < MainWindowConstants::kMaxGridSize; ++i) {
         m_gridLayout->setRowStretch(i, 0);
         m_gridLayout->setColumnStretch(i, 0);
     }
@@ -244,7 +247,7 @@ void MainWindow::keyPressEvent(QKeyEvent *event)
         volumeDownAll();
         break;
     case KeyMap::Action::NextAll:
-        nextAllIfNotLooping();
+        nextAll();
         break;
     case KeyMap::Action::ShuffleAll:
         shuffleAll();
@@ -282,10 +285,10 @@ void MainWindow::keyPressEvent(QKeyEvent *event)
         toggleTileFullscreen();
         break;
     case KeyMap::Action::SeekForward:
-        seekSelected(5);  // V key: 5 seconds forward
+        seekSelected(MainWindowConstants::kSeekStepSeconds);
         break;
     case KeyMap::Action::SeekBackward:
-        seekSelected(-5);  // C key: 5 seconds backward
+        seekSelected(-MainWindowConstants::kSeekStepSeconds);
         break;
     case KeyMap::Action::FrameStepForward:
         frameStepSelected();  // N key: one frame forward
@@ -476,14 +479,16 @@ void MainWindow::setVolumeAll(int volume)
 
 void MainWindow::volumeUpAll()
 {
-    m_currentVolume = qMin(100, m_currentVolume + 5);
+    using namespace MainWindowConstants;
+    m_currentVolume = qMin(100, m_currentVolume + kVolumeStep);
     setVolumeAll(m_currentVolume);
     m_controlPanel->log(QString("Volume: %1%").arg(m_currentVolume));
 }
 
 void MainWindow::volumeDownAll()
 {
-    m_currentVolume = qMax(0, m_currentVolume - 5);
+    using namespace MainWindowConstants;
+    m_currentVolume = qMax(0, m_currentVolume - kVolumeStep);
     setVolumeAll(m_currentVolume);
     m_controlPanel->log(QString("Volume: %1%").arg(m_currentVolume));
 }
@@ -500,23 +505,13 @@ void MainWindow::toggleTileFullscreen()
     }
 }
 
-void MainWindow::nextAllIfNotLooping()
-{
-    for (GridCell *cell : m_cells) {
-        cell->nextIfNotLooping();
-    }
-}
-
 void MainWindow::shuffleThenNextAll()
 {
-    // First shuffle all
     shuffleAll();
-
-    // Then next after delay (200ms)
-    QTimer::singleShot(200, this, &MainWindow::nextAllIfNotLooping);
+    QTimer::singleShot(MainWindowConstants::kShuffleNextDelayMs, this, &MainWindow::nextAll);
 }
 
-GridCell* MainWindow::selectedCell() const
+GridCell* MainWindow::selectedCell() const noexcept
 {
     return m_selectedCell;
 }
