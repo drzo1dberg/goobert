@@ -20,6 +20,7 @@ public:
     [[nodiscard]] int col() const noexcept { return m_col; }
 
     void setPlaylist(const QStringList &files);
+    void loadFile(const QString &file);
     void setSelected(bool selected);
     void play();
     void stop();
