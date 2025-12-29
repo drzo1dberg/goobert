@@ -62,3 +62,6 @@ goobert.ini
 # Package managers
 .conan/
 vcpkg_installed/
+
+# Claude instructions (local only)
+CLAUDE.md
