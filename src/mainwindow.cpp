@@ -12,6 +12,7 @@
 #include <QScreen>
 #include <QDateTime>
 #include <QStatusBar>
+#include <QFileInfo>
 #include <random>
 #include <algorithm>
 #include <utility>
@@ -39,8 +40,17 @@ void MainWindow::setupUi()
 {
     using namespace MainWindowConstants;
 
-    // Main window styling
-    setStyleSheet("QMainWindow { background-color: #1a1a1a; }");
+    // Main window styling with global tooltip fix
+    setStyleSheet(R"(
+        QMainWindow { background-color: #1a1a1a; }
+        QToolTip {
+            background-color: #2a2a2a;
+            color: #ddd;
+            border: 1px solid #555;
+            padding: 6px;
+            font-size: 12px;
+        }
+    )");
 
     // Toolbar at top
     m_toolBar = new ToolBar(this);
@@ -112,6 +122,14 @@ void MainWindow::setupUi()
     connect(m_sidePanel, &SidePanel::cellSelected, this, &MainWindow::onCellSelected);
     connect(m_sidePanel, &SidePanel::fileRenamed, this, &MainWindow::onFileRenamed);
     connect(m_sidePanel, &SidePanel::customSourceRequested, this, &MainWindow::onCustomSource);
+    connect(m_sidePanel, &SidePanel::fileSelected, this, [this](int row, int col, const QString &file) {
+        GridCell *cell = m_cellMap.value({row, col});
+        if (cell) {
+            // Load the specific file and play
+            cell->loadFile(file);
+            log(QString("Playing %1 in [%2,%3]").arg(QFileInfo(file).fileName()).arg(row).arg(col));
+        }
+    });
 }
 
 void MainWindow::startGrid()

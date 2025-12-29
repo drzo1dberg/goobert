@@ -594,10 +594,17 @@ void MpvWidget::mouseMoveEvent(QMouseEvent *event)
 void MpvWidget::mousePressEvent(QMouseEvent *event)
 {
     if (m_oscEnabled && m_mpv) {
+        // Right-click toggles pause (like standalone mpv)
+        if (event->button() == Qt::RightButton) {
+            togglePause();
+            event->accept();
+            return;
+        }
+
+        // Forward other mouse buttons to OSC
         int btn = 0;
         if (event->button() == Qt::LeftButton) btn = 0;
         else if (event->button() == Qt::MiddleButton) btn = 1;
-        else if (event->button() == Qt::RightButton) btn = 2;
 
         command(QVariantList{"mouse", event->pos().x(), event->pos().y(), btn, "single"});
     }

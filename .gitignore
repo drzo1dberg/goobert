@@ -62,4 +62,3 @@ goobert.ini
 # Package managers
 .conan/
 vcpkg_installed/
-CLAUDE.md

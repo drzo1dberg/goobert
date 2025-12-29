@@ -41,6 +41,11 @@ void GridCell::setPlaylist(const QStringList &files)
     m_mpv->loadPlaylist(files);
 }
 
+void GridCell::loadFile(const QString &file)
+{
+    m_mpv->loadFile(file);
+}
+
 void GridCell::setSelected(bool selected)
 {
     if (selected) {

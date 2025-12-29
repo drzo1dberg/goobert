@@ -1,462 +1,184 @@
-# 🎬 Goobert - The Professional Video Wall
+# Goobert - Video Wall Application
 
-**High-performance, hardware-accelerated video wall application for Qt6 and libmpv**
+High-performance video wall application built with Qt6 and libmpv.
 
-[![C++20](https://img.shields.io/badge/C++-20-blue.svg)](https://en.cppreference.com/w/cpp/20)
-[![Qt6](https://img.shields.io/badge/Qt-6-green.svg)](https://www.qt.io/)
-[![MPV](https://img.shields.io/badge/libmpv-latest-orange.svg)](https://mpv.io/)
-[![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
+## Features
 
----
+### Video Wall
+- Configurable NxM grid layouts (1x1 to 10x10)
+- Hardware-accelerated OpenGL rendering
+- Mixed media support (videos, images, GIFs)
+- Auto-loop, shuffle, and watchdog auto-restart
+- Filename filter with AND logic
 
-## 🚀 Overview
+### Playback Control
+- Synchronized play/pause/next across all cells
+- Frame-by-frame stepping with mouse wheel
+- Seek navigation with horizontal scroll
+- Per-cell and global volume control
+- Loop toggle per cell
 
-**Goobert** is a modern C++ video wall application designed for professionals who need reliable, high-performance multi-display video playback. Perfect for digital signage, video installations, live events, streaming setups, and creative displays.
+### Display Modes
+- Grid view with status panel
+- Global fullscreen (F11)
+- Tile fullscreen with mpv OSC (double-click cell)
 
-### Why Goobert?
+### UI Components
+- **ToolBar** - Playback controls, volume slider
+- **ConfigPanel** - Grid size, source path, filter
+- **MonitorWidget** - Real-time cell status table
+- **PlaylistWidget** - Drag & drop playlist management
 
-- ⚡ **Native Performance** - Direct libmpv integration with hardware-accelerated OpenGL rendering
-- 🎯 **Zero Latency** - Smooth playback across unlimited grid configurations
-- 🎨 **Professional UI** - Clean, dark interface designed for production environments
-- 🔧 **Fully Configurable** - Control every aspect through INI configuration files
-- 🖱️ **Intuitive Controls** - Mouse and keyboard shortcuts for efficient operation
-- 📦 **Cross-Platform** - Runs on Linux with minimal dependencies
-- 🆓 **Open Source** - MIT licensed, free for commercial and personal use
+### Professional Features
+- Screenshot capture with clipboard copy
+- Video rotation and zoom
+- Skipper mode (auto-seek to percentage)
+- INI-based configuration
 
----
+## Requirements
 
-## ✨ Features
+- Linux (Debian, Ubuntu, Arch, Fedora)
+- C++20 compiler (GCC 10+, Clang 11+)
+- CMake 3.16+
+- Qt6 (Widgets, OpenGLWidgets, Network)
+- libmpv
 
-### 🎬 Video Wall Engine
-- **Configurable Grid Layouts** - Create any NxM grid configuration (1×1 to 10×10+)
-- **Mixed Media Support** - Play videos, images, and animated GIFs simultaneously
-- **Hardware Acceleration** - Leverages GPU for smooth 4K+ playback
-- **Auto-Loop & Shuffle** - Configurable loop counts and intelligent playlist shuffling
-- **Image Slideshow** - Automatic timing for static images in your wall
-- **Filename Filter** - AND-filter for filenames (e.g. "cat 2024" matches files containing both)
-- **Auto-Restart** - Watchdog automatically restarts cells that stop playing
+## Installation
 
-### 🎮 Advanced Playback Control
-- **Synchronized Controls** - Play, pause, next, previous across all cells or individually
-- **Frame-Stepping** - Precise frame-by-frame navigation with mouse wheel
-- **Seek Navigation** - Side-scroll for quick 30-second jumps (perfect for MX Master mice!)
-- **Volume Management** - Global and per-cell volume control
-- **Mute Toggle** - Instant audio muting across the wall
-
-### 🖥️ Display Modes
-- **Grid View** - Standard multi-cell layout with controls
-- **Global Fullscreen** - Maximize the entire wall for presentations
-- **Tile Fullscreen** - Double-click any cell to focus it
-- **Adaptive Layouts** - Responsive grid sizing with minimal borders
-
-### 🎯 Professional Features
-- **Cell Selection** - Click to select and control individual cells
-- **Status Monitoring** - Real-time playback status for each cell
-- **File Browser** - Quick media directory selection
-- **Skipper Mode** - Auto-skip to configured percentage for video previews
-- **Loop Control** - Per-file or per-cell loop customization
-- **Video Transforms** - Rotation and zoom controls
-- **Screenshot Capture** - One-key screenshots with auto-copy to clipboard
-
-### ⚙️ Configuration System
-- **INI-Based Settings** - Simple, human-readable configuration files
-- **Persistent Settings** - Remember your preferences across sessions
-- **Customizable Defaults** - Set default grid size, volume, paths, and more
-- **Hot-Reload** - Changes apply without restart
-
----
-
-## 📋 System Requirements
-
-### Minimum Requirements
-- **OS**: Linux (Debian, Ubuntu, Arch, Fedora, etc.)
-- **CPU**: Any modern x86_64 processor
-- **GPU**: OpenGL 3.0+ support
-- **RAM**: 2GB (4GB+ recommended for large grids)
-- **Disk**: 100MB for application
-
-### Software Dependencies
-- **C++20 Compiler** - GCC 10+, Clang 11+, or equivalent
-- **CMake** 3.16 or later
-- **Qt6** - Widgets, OpenGLWidgets, Network modules
-- **libmpv** - MPV media player library
-- **OpenGL** - 3.0 or higher
-
----
-
-## 🛠️ Installation
-
-### Quick Install (Debian/Ubuntu)
+### Debian/Ubuntu
 
 ```bash
-# Install dependencies
 sudo apt install build-essential cmake qt6-base-dev qt6-opengl-dev libmpv-dev pkg-config
 
-# Clone and build
 git clone https://github.com/drzo1dberg/goobert.git
 cd goobert
 mkdir build && cd build
 cmake ..
 make -j$(nproc)
-
-# Run
 ./goobert
 ```
 
-### Other Distributions
+### Arch Linux
 
-**Arch Linux:**
 ```bash
 sudo pacman -S cmake qt6-base mpv
 ```
 
-**Fedora:**
+### Fedora
+
 ```bash
 sudo dnf install cmake qt6-qtbase-devel qt6-qtopengl-devel mpv-libs-devel
 ```
 
-**openSUSE:**
-```bash
-sudo zypper install cmake qt6-base-devel libmpv-devel
-```
-
-### System-Wide Installation
+## Usage
 
 ```bash
-# From build directory
-sudo make install
-
-# Goobert is now available system-wide
-goobert
+./goobert                    # Use ~/Videos
+./goobert /path/to/media     # Custom directory
 ```
 
----
+1. Set grid size (rows x columns)
+2. Select media source directory
+3. Optional: Enter filter terms (space-separated, AND logic)
+4. Click Start
 
-## 🎯 Quick Start Guide
+## Keyboard Shortcuts
 
-### 1. Launch Goobert
+### Global
+| Key | Action |
+|-----|--------|
+| Space / P | Play/Pause all |
+| E | Next all |
+| Q | Shuffle all |
+| M | Mute all |
+| U / I | Volume up/down |
+| F / F11 | Toggle fullscreen |
+| Escape | Exit fullscreen |
 
-```bash
-# Use default media directory (~/Videos)
-./goobert
+### Selected Cell
+| Key | Action |
+|-----|--------|
+| W/A/S/D | Navigate selection |
+| V / C | Seek forward/backward |
+| N / B | Frame step forward/backward |
+| L | Toggle loop |
+| , / . | Previous/Next in playlist |
+| T | Screenshot |
+| R | Rotate 90° |
+| +/- | Zoom in/out |
 
-# Specify a custom media directory
-./goobert /path/to/your/media
+### Mouse
+| Action | Effect |
+|--------|--------|
+| Left click | Select cell |
+| Double-click | Tile fullscreen |
+| Right click | Toggle pause |
+| Middle click | Toggle loop |
+| Horizontal scroll | Seek |
+| Vertical scroll | Frame step |
 
-# Show help
-./goobert --help
-```
+## Configuration
 
-### 2. Configure Your Grid
-
-1. **Set Grid Size** - Use the spinboxes to choose rows × columns (e.g., 3×3, 2×4)
-2. **Select Media Source** - Browse to your media directory or enter path directly
-3. **Filter (Optional)** - Enter space-separated terms to filter filenames (AND logic)
-4. **Click "Start"** - Grid initializes and begins playback automatically
-
-### 3. Control Playback
-
-- **⏯ Play/Pause** - Toggle playback across all cells
-- **⏭ Next/Previous** - Navigate through playlists
-- **🔀 Shuffle** - Randomize all playlists
-- **🔇 Mute** - Silence all audio
-- **Volume Slider** - Adjust global volume (0-100%)
-
-### 4. Advanced Controls
-
-- **Click a Cell** - Select for individual control
-- **Double-Click** - Enter tile fullscreen mode
-- **Horizontal Scroll** - Seek ±30 seconds (configurable)
-- **Vertical Scroll** - Step frame-by-frame forward/backward
-- **Middle Mouse** - Toggle loop on selected cell
-- **Back Button** - Shuffle then skip to next
-
----
-
-## ⚙️ Configuration
-
-Goobert stores settings in `~/.config/goobert/goobert.ini`
-
-### Configuration File Example
+Settings stored in `~/.config/goobert/goobert.ini`:
 
 ```ini
 [playback]
-loop_count=5                    # Loop each file 5 times
-default_volume=30               # Start at 30% volume
-image_display_duration=2.5      # Show images for 2.5 seconds
+loop_count=5
+default_volume=30
+image_display_duration=2.5
 
 [grid]
-default_rows=3                  # 3×3 grid by default
+default_rows=3
 default_cols=3
 
 [paths]
-default_media_path=/mnt/media   # Your media directory
-screenshot_path=/mnt/screenshots # Screenshot save location
+default_media_path=/mnt/media
+screenshot_path=/mnt/screenshots
 
 [skipper]
-enabled=true                    # Auto-skip on file load
-skip_percent=0.33               # Skip to 33% of duration
+enabled=true
+skip_percent=0.33
 
 [seek]
-amount_seconds=30               # Seek by 30 seconds with V/C keys
+amount_seconds=30
 ```
 
-### Copy Example Config
-
-```bash
-cp goobert.ini.example ~/.config/goobert/goobert.ini
-# Edit with your preferred settings
-nano ~/.config/goobert/goobert.ini
-```
-
----
-
-## 🎮 Keyboard Shortcuts
-
-### Global Controls
-| Shortcut | Action |
-|----------|--------|
-| `Space` / `P` | Play/Pause all cells |
-| `E` | Next all cells |
-| `Q` | Shuffle all playlists |
-| `M` | Mute all cells |
-| `U` | Volume up (+5%) |
-| `I` | Volume down (-5%) |
-| `F` / `F11` | Toggle fullscreen |
-| `Escape` | Exit fullscreen / Deselect cell |
-
-### Selected Cell Controls
-| Shortcut | Action |
-|----------|--------|
-| `W` / `A` / `S` / `D` | Navigate cell selection (up/left/down/right) |
-| `V` | Seek forward +5s |
-| `C` | Seek backward -5s |
-| `N` | Frame step forward |
-| `B` | Frame step backward |
-| `T` | Screenshot (auto-copy path to clipboard) |
-| `L` | Toggle loop on selected cell |
-| `,` | Previous in playlist |
-| `.` | Next in playlist |
-| `R` | Rotate video 90° |
-| `+` / `-` | Zoom in/out |
-
-### Mouse Controls
-| Action | Effect |
-|--------|--------|
-| `Left Click` | Select cell |
-| `Double-Click` | Tile fullscreen (focus cell) |
-| `Right Click` | Toggle pause (no selection) |
-| `Middle Click` | Toggle loop (no selection) |
-| `Forward Button` | Next on cell (no selection) |
-| `Horizontal Scroll` | Seek ±30 seconds in selected cell |
-| `Vertical Scroll` | Frame step forward/backward |
-
----
-
-## 🏗️ Architecture
-
-### Component Overview
+## Architecture
 
 ```
-┌─────────────────────────────────────────┐
-│           MainWindow (QMainWindow)      │
-│  ┌─────────────────────────────────┐   │
-│  │   Video Wall (QGridLayout)      │   │
-│  │  ┌────────┬────────┬────────┐   │   │
-│  │  │ Cell   │ Cell   │ Cell   │   │   │
-│  │  │ (MPV)  │ (MPV)  │ (MPV)  │   │   │
-│  │  └────────┴────────┴────────┘   │   │
-│  └─────────────────────────────────┘   │
-│  ┌─────────────────────────────────┐   │
-│  │    ControlPanel (QWidget)       │   │
-│  │  [Grid] [Source] [▶] [Vol] ...  │   │
-│  └─────────────────────────────────┘   │
-└─────────────────────────────────────────┘
+MainWindow
+├── ToolBar (playback controls)
+├── ConfigPanel (grid/source settings)
+└── QSplitter
+    ├── SidePanel
+    │   ├── MonitorWidget (status table)
+    │   └── PlaylistWidget (drag & drop)
+    └── Video Wall
+        └── GridCell[] → MpvWidget (libmpv)
 ```
 
-### Key Classes
-
-- **`MpvWidget`** - OpenGL widget with libmpv render context (one per cell)
-- **`GridCell`** - Container for MpvWidget, tracks position and state
-- **`MainWindow`** - Grid orchestrator, handles input and fullscreen
-- **`ControlPanel`** - UI controls and status monitoring
-- **`FileScanner`** - Recursive media file discovery
-- **`Config`** - Singleton configuration manager (Qt QSettings)
-- **`KeyMap`** - Singleton keyboard shortcut manager with type-safe `enum class` actions
-
-### Signal/Slot Flow
+## Project Structure
 
 ```
-User Action → ControlPanel → MainWindow → GridCell → MpvWidget → libmpv
-                                ↓
-                          Status Updates ← MpvWidget
-                                ↓
-                          ControlPanel (Monitor Table)
+src/
+├── main.cpp
+├── mainwindow.cpp/h      # Grid management, input handling
+├── mpvwidget.cpp/h       # libmpv OpenGL integration
+├── gridcell.cpp/h        # Video cell container
+├── toolbar.cpp/h         # Playback controls
+├── sidepanel.cpp/h       # Tabbed side panel
+├── monitorwidget.cpp/h   # Cell status monitor
+├── playlistwidget.cpp/h  # Playlist drag & drop
+├── configpanel.cpp/h     # Configuration UI
+├── filescanner.cpp/h     # Media file scanner
+├── config.cpp/h          # Settings manager
+└── keymap.cpp/h          # Keyboard shortcuts
 ```
 
----
+## License
 
-## 🎨 Use Cases
+MIT License - Free for commercial and personal use.
 
-### Digital Signage
-- Retail displays with synchronized product videos
-- Restaurant menus with rotating content
-- Corporate lobbies with multi-screen presentations
+## Author
 
-### Live Events
-- Concert visuals across multiple screens
-- Conference backgrounds and sponsor displays
-- Theater and stage production backdrops
-
-### Creative Installations
-- Art galleries with synchronized video art
-- Museums with interactive multi-screen exhibits
-- Public spaces with ambient video walls
-
-### Streaming & Production
-- OBS virtual camera multi-angle displays
-- Live stream backgrounds with dynamic content
-- Video production monitoring walls
-
-### Personal Use
-- Home media centers with multi-screen ambiance
-- Security camera monitoring grids
-- Photo slideshow walls at events
-
----
-
-## 🔧 Development
-
-### Build from Source
-
-```bash
-git clone https://github.com/drzo1dberg/goobert.git
-cd goobert
-
-# Create build directory
-mkdir build && cd build
-
-# Configure with CMake
-cmake .. -DCMAKE_BUILD_TYPE=Release
-
-# Build with all CPU cores
-make -j$(nproc)
-
-# Run tests (if available)
-ctest
-
-# Install
-sudo make install
-```
-
-### Project Structure
-
-```
-goobert/
-├── CMakeLists.txt           # Build configuration
-├── goobert.ini.example      # Example config file
-├── README.md                # This file
-├── CLAUDE.md                # Developer instructions
-└── src/
-    ├── main.cpp             # Application entry point
-    ├── mainwindow.{cpp,h}   # Main window & grid management
-    ├── mpvwidget.{cpp,h}    # libmpv OpenGL integration
-    ├── gridcell.{cpp,h}     # Video cell container
-    ├── controlpanel.{cpp,h} # UI controls
-    ├── filescanner.{cpp,h}  # Media file scanner
-    ├── config.{cpp,h}       # Configuration manager
-    ├── keymap.{cpp,h}       # Keyboard shortcut management
-    └── mpvcontroller.{cpp,h}# MPV IPC (optional)
-```
-
-### Code Quality
-- **Modern C++20** - Uses latest language features:
-  - `enum class` for type-safe enumerations
-  - Move semantics with `std::move` for efficient string handling
-  - `static inline` member initialization for thread-safe singletons
-  - Uniform initialization with brace syntax
-  - `= delete` for explicitly non-copyable classes
-- **Qt Best Practices** - Signal/slot architecture, RAII, parent-child cleanup
-- **Thread-Safe** - Proper Qt event loop integration, static RNG for shuffle operations
-- **Memory Safe** - No manual memory leaks, proper resource cleanup
-
----
-
-## 🐛 Troubleshooting
-
-### MPV Not Found
-```bash
-# Ensure libmpv is installed
-pkg-config --modversion mpv
-
-# If missing, install:
-sudo apt install libmpv-dev  # Debian/Ubuntu
-```
-
-### Qt6 Not Found
-```bash
-# Verify Qt6 installation
-qmake6 --version
-
-# Install Qt6 base packages:
-sudo apt install qt6-base-dev qt6-opengl-dev
-```
-
-### OpenGL Errors
-```bash
-# Check OpenGL support
-glxinfo | grep "OpenGL version"
-
-# Update graphics drivers if needed
-```
-
-### Black Screen / No Video
-- Check that media files are in supported formats (mp4, mkv, avi, webm, etc.)
-- Verify file permissions on media directory
-- Check MPV log output for codec errors
-
----
-
-## 📜 License
-
-**MIT License** - Free for commercial and personal use.
-
-See [LICENSE](LICENSE) for full text.
-
----
-
-## 👤 Author
-
-**drzo1dberg**
-GitHub: [@drzo1dberg](https://github.com/drzo1dberg)
-
----
-
-## 🙏 Acknowledgments
-
-- **MPV Project** - For the excellent media player library
-- **Qt Project** - For the powerful GUI framework
-- **Open Source Community** - For continuous inspiration
-
----
-
-## 📞 Support
-
-- **Issues**: [GitHub Issues](https://github.com/drzo1dberg/goobert/issues)
-- **Discussions**: [GitHub Discussions](https://github.com/drzo1dberg/goobert/discussions)
-
----
-
-## 🗺️ Roadmap
-
-- [ ] Windows and macOS support
-- [ ] Audio visualization modes
-- [ ] Network stream support (RTSP, HTTP)
-- [ ] Playlist management UI
-- [ ] Video effects and filters
-- [ ] Remote control API
-- [ ] Web-based control panel
-
----
-
-**Made with ❤️ and C++20**
+**drzo1dberg** - [@drzo1dberg](https://github.com/drzo1dberg)
