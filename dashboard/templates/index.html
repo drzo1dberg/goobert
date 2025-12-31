@@ -902,12 +902,22 @@
             });
         }
 
-        function openInFileManager(path) {
-            // Get directory from file path
-            const dir = path.includes('/') ? path.substring(0, path.lastIndexOf('/')) : path;
-            navigator.clipboard.writeText(dir).then(() => {
-                showToast(`Directory copied: ${dir}`);
-            });
+        async function openInFileManager(path) {
+            try {
+                const response = await fetch('/api/open-folder', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ path: path })
+                });
+                const data = await response.json();
+                if (data.success) {
+                    showToast(`Opened: ${data.folder}`);
+                } else {
+                    showToast(`Error: ${data.error}`);
+                }
+            } catch (e) {
+                showToast(`Failed to open folder: ${e.message}`);
+            }
         }
 
         function showToast(message) {
@@ -1185,7 +1195,7 @@
                         <td class="path-cell">
                             <span class="path-text" title="${f.path}">${f.path}</span>
                             <button class="copy-btn" onclick="copyToClipboard('${f.path.replace(/'/g, "\\'")}', this)">Copy</button>
-                            <button class="open-btn" onclick="openInFileManager('${f.path.replace(/'/g, "\\'")}')">Dir</button>
+                            <button class="open-btn" onclick="openInFileManager('${f.path.replace(/'/g, "\\'")}')">Open</button>
                         </td>
                     </tr>
                 `).join('');
@@ -1207,7 +1217,7 @@
                     <td class="path-cell">
                         <span class="path-text" title="${f.path}">${f.path}</span>
                         <button class="copy-btn" onclick="copyToClipboard('${f.path.replace(/'/g, "\\'")}', this)">Copy</button>
-                        <button class="open-btn" onclick="openInFileManager('${f.path.replace(/'/g, "\\'")}')">Dir</button>
+                        <button class="open-btn" onclick="openInFileManager('${f.path.replace(/'/g, "\\'")}')">Open</button>
                     </td>
                 </tr>
             `).join('');
@@ -1240,7 +1250,7 @@
                     <td class="path-cell">
                         <span class="path-text" title="${s.path}">${s.path}</span>
                         <button class="copy-btn" onclick="copyToClipboard('${s.path.replace(/'/g, "\\'")}', this)">Copy</button>
-                        <button class="open-btn" onclick="openInFileManager('${s.path.replace(/'/g, "\\'")}')">Dir</button>
+                        <button class="open-btn" onclick="openInFileManager('${s.path.replace(/'/g, "\\'")}')">Open</button>
                     </td>
                 </tr>
             `).join('');
