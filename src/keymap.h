@@ -34,6 +34,8 @@ public:
         PrevSelected,
         SeekForward,
         SeekBackward,
+        SeekForwardLong,
+        SeekBackwardLong,
         FrameStepForward,
         FrameStepBackward,
         ToggleLoop,

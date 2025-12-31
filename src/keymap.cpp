@@ -60,6 +60,8 @@ void KeyMap::setupDefaultBindings()
     m_bindings[{Qt::Key_X, Qt::NoModifier}] = Action::ShuffleThenNextAll;
     m_bindings[{Qt::Key_C, Qt::NoModifier}] = Action::SeekBackward;
     m_bindings[{Qt::Key_V, Qt::NoModifier}] = Action::SeekForward;
+    m_bindings[{Qt::Key_C, Qt::ShiftModifier}] = Action::SeekBackwardLong;
+    m_bindings[{Qt::Key_V, Qt::ShiftModifier}] = Action::SeekForwardLong;
     m_bindings[{Qt::Key_B, Qt::NoModifier}] = Action::FrameStepForward;
     m_bindings[{Qt::Key_B, Qt::ShiftModifier}] = Action::FrameStepBackward;
 
@@ -81,6 +83,8 @@ void KeyMap::setupDefaultBindings()
     m_descriptions[Action::FullscreenSelected] = "Fullscreen selected cell";
     m_descriptions[Action::SeekForward] = "Seek forward 5s";
     m_descriptions[Action::SeekBackward] = "Seek backward 5s";
+    m_descriptions[Action::SeekForwardLong] = "Seek forward 2min";
+    m_descriptions[Action::SeekBackwardLong] = "Seek backward 2min";
     m_descriptions[Action::FrameStepForward] = "Frame step forward";
     m_descriptions[Action::FrameStepBackward] = "Frame step backward";
     m_descriptions[Action::ToggleLoop] = "Toggle loop on selected";

@@ -28,6 +28,7 @@ namespace MainWindowConstants {
     inline constexpr int kShuffleNextDelayMs = 200;
     inline constexpr int kVolumeStep = 5;
     inline constexpr double kSeekStepSeconds = 5.0;
+    inline constexpr double kSeekStepLongSeconds = 120.0;
 }
 
 class MainWindow : public QMainWindow

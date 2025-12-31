@@ -378,6 +378,12 @@ void MainWindow::keyPressEvent(QKeyEvent *event)
     case KeyMap::Action::SeekBackward:
         seekSelected(-MainWindowConstants::kSeekStepSeconds);
         break;
+    case KeyMap::Action::SeekForwardLong:
+        seekSelected(MainWindowConstants::kSeekStepLongSeconds);
+        break;
+    case KeyMap::Action::SeekBackwardLong:
+        seekSelected(-MainWindowConstants::kSeekStepLongSeconds);
+        break;
     case KeyMap::Action::FrameStepForward:
         frameStepSelected();  // N key: one frame forward
         break;
