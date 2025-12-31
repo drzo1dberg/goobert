@@ -8,6 +8,7 @@ comprehensive statistics with modern visualizations.
 
 import sqlite3
 import os
+import subprocess
 from datetime import datetime, timedelta
 from pathlib import Path
 from flask import Flask, render_template, jsonify, request
@@ -943,6 +944,31 @@ def api_directory_analysis():
         'session_count': d[1]['session_count'],
         'avg_session_per_file': round(d[1]['session_count'] / d[1]['file_count'], 1) if d[1]['file_count'] > 0 else 0
     } for d in sorted_dirs])
+
+
+@app.route('/api/open-folder', methods=['POST'])
+def api_open_folder():
+    """Open a folder in the system file manager via xdg-open"""
+    data = request.get_json()
+    path = data.get('path')
+
+    if not path:
+        return jsonify({'error': 'No path provided'}), 400
+
+    # Get directory from file path
+    if os.path.isfile(path):
+        folder = os.path.dirname(path)
+    else:
+        folder = path
+
+    if not os.path.exists(folder):
+        return jsonify({'error': 'Path does not exist'}), 404
+
+    try:
+        subprocess.Popen(['xdg-open', folder])
+        return jsonify({'success': True, 'folder': folder})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
 
 if __name__ == '__main__':

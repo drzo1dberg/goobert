@@ -902,12 +902,22 @@
             });
         }
 
-        function openInBrowser(path) {
-            // Get directory from file path
-            const dir = path.includes('/') ? path.substring(0, path.lastIndexOf('/')) : path;
-            const url = 'file://' + dir;
-            window.open(url, '_blank');
-            showToast(`Opening: ${dir}`);
+        async function openInBrowser(path) {
+            try {
+                const response = await fetch('/api/open-folder', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ path: path })
+                });
+                const data = await response.json();
+                if (data.success) {
+                    showToast(`Opened: ${data.folder}`);
+                } else {
+                    showToast(`Error: ${data.error}`);
+                }
+            } catch (e) {
+                showToast(`Failed: ${e.message}`);
+            }
         }
 
         function showToast(message) {
