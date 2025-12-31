@@ -329,7 +329,7 @@
         }
 
         .open-btn {
-            background: var(--success);
+            background: var(--accent);
             border: none;
             color: black;
             padding: 2px 8px;
@@ -340,6 +340,21 @@
         }
 
         .open-btn:hover {
+            background: #00b8e6;
+        }
+
+        .play-btn {
+            background: var(--success);
+            border: none;
+            color: black;
+            padding: 2px 8px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 11px;
+            margin-left: 4px;
+        }
+
+        .play-btn:hover {
             background: #00cc77;
         }
 
@@ -902,16 +917,22 @@
             });
         }
 
-        async function openInBrowser(path) {
+        function openInBrowser(path) {
+            // Get directory from file path
+            const dir = path.includes('/') ? path.substring(0, path.lastIndexOf('/')) : path;
+            window.open('/browse' + dir, '_blank');
+        }
+
+        async function playInMpv(path) {
             try {
-                const response = await fetch('/api/open-folder', {
+                const response = await fetch('/api/open-mpv', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ path: path })
                 });
                 const data = await response.json();
                 if (data.success) {
-                    showToast(`Opened: ${data.folder}`);
+                    showToast(`Playing: ${data.file}`);
                 } else {
                     showToast(`Error: ${data.error}`);
                 }
@@ -1193,9 +1214,9 @@
                         <td><span class="badge ${f.is_image ? 'badge-image' : 'badge-video'}">${f.is_image ? 'IMG' : 'VID'}</span></td>
                         <td>${f.added_at}</td>
                         <td class="path-cell">
-                            <span class="path-text" title="${f.path}">${f.path}</span>
+                            <button class="play-btn" onclick="playInMpv('${f.path.replace(/'/g, "\\'")}')">Play</button>
+                            <button class="open-btn" onclick="openInBrowser('${f.path.replace(/'/g, "\\'")}')">Dir</button>
                             <button class="copy-btn" onclick="copyToClipboard('${f.path.replace(/'/g, "\\'")}', this)">Copy</button>
-                            <button class="open-btn" onclick="openInBrowser('${f.path.replace(/'/g, "\\'")}')">Open</button>
                         </td>
                     </tr>
                 `).join('');
@@ -1215,9 +1236,9 @@
                     <td>${f.avg_watch_pct}%</td>
                     <td><span class="badge ${f.is_image ? 'badge-image' : 'badge-video'}">${f.is_image ? 'IMG' : 'VID'}</span></td>
                     <td class="path-cell">
-                        <span class="path-text" title="${f.path}">${f.path}</span>
+                        <button class="play-btn" onclick="playInMpv('${f.path.replace(/'/g, "\\'")}')">Play</button>
+                        <button class="open-btn" onclick="openInBrowser('${f.path.replace(/'/g, "\\'")}')">Dir</button>
                         <button class="copy-btn" onclick="copyToClipboard('${f.path.replace(/'/g, "\\'")}', this)">Copy</button>
-                        <button class="open-btn" onclick="openInBrowser('${f.path.replace(/'/g, "\\'")}')">Open</button>
                     </td>
                 </tr>
             `).join('');
@@ -1248,9 +1269,9 @@
                     <td>${s.duration}</td>
                     <td>${s.cell}</td>
                     <td class="path-cell">
-                        <span class="path-text" title="${s.path}">${s.path}</span>
+                        <button class="play-btn" onclick="playInMpv('${s.path.replace(/'/g, "\\'")}')">Play</button>
+                        <button class="open-btn" onclick="openInBrowser('${s.path.replace(/'/g, "\\'")}')">Dir</button>
                         <button class="copy-btn" onclick="copyToClipboard('${s.path.replace(/'/g, "\\'")}', this)">Copy</button>
-                        <button class="open-btn" onclick="openInBrowser('${s.path.replace(/'/g, "\\'")}')">Open</button>
                     </td>
                 </tr>
             `).join('');

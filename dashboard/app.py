@@ -946,29 +946,89 @@ def api_directory_analysis():
     } for d in sorted_dirs])
 
 
-@app.route('/api/open-folder', methods=['POST'])
-def api_open_folder():
-    """Open a folder in the system file manager via xdg-open"""
+@app.route('/api/open-mpv', methods=['POST'])
+def api_open_mpv():
+    """Open a file in mpv"""
     data = request.get_json()
     path = data.get('path')
 
     if not path:
         return jsonify({'error': 'No path provided'}), 400
 
-    # Get directory from file path
-    if os.path.isfile(path):
-        folder = os.path.dirname(path)
-    else:
-        folder = path
-
-    if not os.path.exists(folder):
-        return jsonify({'error': 'Path does not exist'}), 404
+    if not os.path.exists(path):
+        return jsonify({'error': 'File not found'}), 404
 
     try:
-        subprocess.Popen(['xdg-open', folder])
-        return jsonify({'success': True, 'folder': folder})
+        subprocess.Popen(['mpv', path])
+        return jsonify({'success': True, 'file': os.path.basename(path)})
     except Exception as e:
         return jsonify({'error': str(e)}), 500
+
+
+@app.route('/browse')
+@app.route('/browse/<path:folder_path>')
+def browse_folder(folder_path=''):
+    """Browse a folder in the web interface"""
+    # Handle root path
+    if not folder_path:
+        folder_path = '/'
+    elif not folder_path.startswith('/'):
+        folder_path = '/' + folder_path
+
+    if not os.path.exists(folder_path):
+        return f"Path not found: {folder_path}", 404
+
+    if os.path.isfile(folder_path):
+        folder_path = os.path.dirname(folder_path)
+
+    # Get directory contents
+    items = []
+    try:
+        for name in sorted(os.listdir(folder_path)):
+            full_path = os.path.join(folder_path, name)
+            is_dir = os.path.isdir(full_path)
+            items.append({
+                'name': name,
+                'path': full_path,
+                'is_dir': is_dir,
+                'size': os.path.getsize(full_path) if not is_dir else 0
+            })
+    except PermissionError:
+        return f"Permission denied: {folder_path}", 403
+
+    # Get parent directory
+    parent = os.path.dirname(folder_path) if folder_path != '/' else None
+
+    return f'''<!DOCTYPE html>
+<html>
+<head>
+    <title>Browse: {folder_path}</title>
+    <style>
+        body {{ font-family: -apple-system, sans-serif; background: #0a0a0f; color: #f0f0f5; padding: 20px; }}
+        h1 {{ color: #00d4ff; font-size: 18px; word-break: break-all; }}
+        a {{ color: #00d4ff; text-decoration: none; }}
+        a:hover {{ text-decoration: underline; }}
+        .item {{ padding: 8px 12px; border-bottom: 1px solid #2a2a3a; display: flex; align-items: center; gap: 10px; }}
+        .item:hover {{ background: #1a1a24; }}
+        .dir {{ color: #00ff88; }}
+        .file {{ color: #a0a0b0; }}
+        .size {{ color: #606070; font-size: 12px; margin-left: auto; }}
+        .back {{ background: #1a1a24; margin-bottom: 10px; }}
+        .copy-btn {{ background: #2a2a3a; border: 1px solid #3a3a4a; color: #a0a0b0; padding: 4px 8px; border-radius: 4px; cursor: pointer; font-size: 11px; }}
+        .copy-btn:hover {{ background: #00d4ff; color: black; }}
+    </style>
+</head>
+<body>
+    <h1>{folder_path} <button class="copy-btn" onclick="navigator.clipboard.writeText('{folder_path}')">Copy Path</button></h1>
+    {'<div class="item back"><a href="/browse' + parent + '">⬆️ ..</a></div>' if parent else ''}
+    {''.join(f'''<div class="item">
+        <span>{'📁' if item['is_dir'] else '📄'}</span>
+        <a href="/browse{item['path']}" class="{'dir' if item['is_dir'] else 'file'}">{item['name']}</a>
+        <span class="size">{item['size'] // 1024}KB</span>
+        <button class="copy-btn" onclick="navigator.clipboard.writeText('{item['path']}')">Copy</button>
+    </div>''' for item in items)}
+</body>
+</html>'''
 
 
 if __name__ == '__main__':
