@@ -38,6 +38,24 @@ High-performance video wall application built with Qt6 and libmpv.
 - INI-based configuration
 - One-handed keyboard layout (left hand on QWERTY)
 
+### Statistics & Analytics
+- SQLite-based watch time tracking per file
+- Comprehensive web dashboard with modern visualizations
+- Session tracking with hourly/daily/weekly/monthly trends
+- Skip and loop event logging with heatmaps
+- File type breakdown (video vs image)
+- Completion rate tracking (full watch, partial, skipped)
+- Concurrent cell usage analytics
+- Favorites system for bookmarking files
+- Directory-level statistics
+- CSV export for external analysis
+
+### Settings Dialog
+- General: Grid size, paths, watchdog interval
+- Playback: Seek steps, volume, loop count, image duration
+- Keyboard: Full shortcut customization with key capture
+- Statistics: Enable/disable tracking, view top files, export/clear data
+
 ## Requirements
 
 - Linux (Debian, Ubuntu, Arch, Fedora) or macOS
@@ -142,6 +160,42 @@ All shortcuts accessible with left hand on QWERTY keyboard.
 | Scroll wheel | Zoom (to cursor) |
 | Horizontal scroll | Seek |
 
+## Statistics Dashboard
+
+Goobert includes a web-based statistics dashboard for viewing detailed analytics.
+
+### Setup
+
+```bash
+# Install Python dependencies
+cd dashboard
+pip install flask flask-cors
+
+# Run dashboard
+python3 app.py
+```
+
+Open `http://localhost:5000` in your browser.
+
+### Dashboard Features
+
+- **Summary Stats**: Real elapsed time, accumulated watch time, parallelism factor
+- **Time Distribution**: Hourly and daily watch patterns
+- **Timeline**: 30-day activity history
+- **Content Analysis**: Completion rates, file type breakdown
+- **Skip Analysis**: Skip position heatmap, skip type distribution
+- **Session Analysis**: Session length distribution, weekly/monthly trends
+- **Top Files**: Most watched files with skip/loop counts
+- **Favorites**: Bookmarked files
+- **Directory Stats**: Watch time by folder
+
+### Launcher Script
+
+```bash
+# Start both Goobert and the dashboard
+./scripts/start-with-dashboard.sh
+```
+
 ## Configuration
 
 Settings stored in `~/.config/goobert/goobert.ini`:
@@ -199,7 +253,18 @@ src/
 ├── filescanner.cpp/h     # Recursive media file scanner
 ├── config.cpp/h          # Singleton settings manager (QSettings)
 ├── keymap.cpp/h          # Centralized keyboard shortcut mapping
+├── statsmanager.cpp/h    # SQLite statistics tracking singleton
+├── settingsdialog.cpp/h  # Settings dialog with 4 tabs
 └── theme.h               # Centralized UI theme constants
+
+dashboard/
+├── app.py                # Flask web server with REST API
+├── templates/
+│   └── index.html        # Dashboard UI with Chart.js visualizations
+└── requirements.txt      # Python dependencies
+
+scripts/
+└── start-with-dashboard.sh  # Launch both app and dashboard
 ```
 
 ## License

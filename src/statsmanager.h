@@ -17,6 +17,9 @@ struct FileStats {
     qint64 lastPositionMs = 0;
     qint64 durationMs = 0;
     bool isImage = false;
+    int skipCount = 0;      // How many times this file was skipped
+    int loopCount = 0;      // How many times loop was toggled on this file
+    double avgWatchPercent = 0.0;  // Average % of file watched before skip/next
 };
 
 struct WatchSessionInfo {
@@ -237,6 +240,29 @@ public:
     bool exportToCsv(const QString &path) const;
     bool exportSessionsToCsv(const QString &path) const;
     void clearAllStats();
+
+    // Favorites
+    void toggleFavorite(const QString &filePath);
+    [[nodiscard]] bool isFavorite(const QString &filePath) const;
+    [[nodiscard]] QList<FileStats> getFavorites() const;
+    [[nodiscard]] int getFavoriteCount() const;
+
+    // Position sampling (for heatmap)
+    void logPositionSample(const QString &filePath, double positionPct);
+    [[nodiscard]] QMap<int, int> getPositionHeatmap(const QString &filePath = QString()) const;
+
+    // Advanced analytics
+    [[nodiscard]] QMap<int, qint64> getSessionLengthDistribution() const;
+    [[nodiscard]] QPair<qint64, qint64> getFileTypeBreakdown() const;  // video_ms, image_ms
+    [[nodiscard]] QMap<QString, int> getSkipTypeBreakdown() const;
+    [[nodiscard]] QMap<int, int> getSkipPositionHeatmap() const;
+    [[nodiscard]] int getMaxConcurrentCells() const;
+    [[nodiscard]] double getAverageConcurrentCells() const;
+    [[nodiscard]] QList<QPair<QString, qint64>> getWeeklyTrend(int weeks = 12) const;
+    [[nodiscard]] QList<QPair<QString, qint64>> getMonthlyTrend(int months = 12) const;
+    [[nodiscard]] QMap<QString, TimeRangeStats> getDirectoryTimeAnalysis(int limit = 10) const;
+    [[nodiscard]] int getCompletionCount(double thresholdPct = 90.0) const;
+    [[nodiscard]] int getEarlySkipCount(double thresholdPct = 10.0) const;
 
 signals:
     void statsUpdated(const QString &filePath);
