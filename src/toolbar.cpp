@@ -1,8 +1,8 @@
 #include "toolbar.h"
 #include "config.h"
-#include <QAction>
-#include <QWidget>
+#include "theme.h"
 #include <QHBoxLayout>
+#include <QFileDialog>
 
 ToolBar::ToolBar(QWidget *parent)
     : QToolBar(parent)
@@ -14,102 +14,215 @@ void ToolBar::setupUi()
 {
     setMovable(false);
     setFloatable(false);
-    setIconSize(QSize(20, 20));
-    setToolButtonStyle(Qt::ToolButtonTextBesideIcon);
 
-    setStyleSheet(R"(
-        QToolBar { background-color: #1a1a1a; border: none; spacing: 4px; padding: 4px; }
-        QToolButton { background-color: #2a2a2a; border: none; padding: 6px 10px; color: #ccc; }
-        QToolButton:hover { background-color: #3a3a3a; }
-        QToolButton:disabled { color: #555; }
-        QToolButton:checked { background-color: #4a4a4a; }
-        QSlider::groove:horizontal { background: #333; height: 6px; border-radius: 3px; }
-        QSlider::handle:horizontal { background: #888; width: 14px; margin: -4px 0; border-radius: 7px; }
-        QSlider::handle:horizontal:hover { background: #aaa; }
-        QLabel { color: #888; padding: 0 4px; }
-    )");
+    setStyleSheet(QString(
+        "QToolBar { background: %1; border: none; border-bottom: 1px solid %2; padding: 4px 8px; spacing: 4px; }"
+        "QLabel { color: %3; font-size: 11px; }"
+    ).arg(Theme::Colors::Surface, Theme::Colors::GlassBorder, Theme::Colors::TextMuted));
 
-    // Start/Stop actions
-    m_startAction = addAction("Start");
-    m_startAction->setToolTip("Start grid playback");
-    connect(m_startAction, &QAction::triggered, this, &ToolBar::startClicked);
+    QString btn = QString(
+        "QPushButton { background: %1; border: 1px solid %2; border-radius: 3px; padding: 4px 8px; "
+        "color: %3; font-size: 11px; }"
+        "QPushButton:hover { background: %4; }"
+        "QPushButton:disabled { color: %5; }"
+    ).arg(Theme::Colors::SurfaceLight, Theme::Colors::GlassBorder,
+          Theme::Colors::TextPrimary, Theme::Colors::SurfaceHover, Theme::Colors::TextMuted);
 
-    m_stopAction = addAction("Stop");
-    m_stopAction->setToolTip("Stop grid playback");
-    m_stopAction->setEnabled(false);
-    connect(m_stopAction, &QAction::triggered, this, &ToolBar::stopClicked);
+    QString accentBtn = QString(
+        "QPushButton { background: %1; border: none; border-radius: 3px; padding: 4px 10px; "
+        "color: %2; font-weight: 600; font-size: 11px; }"
+        "QPushButton:hover { background: #33ddff; }"
+        "QPushButton:disabled { background: %3; color: %4; }"
+    ).arg(Theme::Colors::AccentPrimary, Theme::Colors::Background,
+          Theme::Colors::SurfaceLight, Theme::Colors::TextMuted);
+
+    QString stopBtnStyle = QString(
+        "QPushButton { background: %1; border: none; border-radius: 3px; padding: 4px 10px; "
+        "color: white; font-weight: 600; font-size: 11px; }"
+        "QPushButton:hover { background: #ff5566; }"
+        "QPushButton:disabled { background: %2; color: %3; }"
+    ).arg(Theme::Colors::Error, Theme::Colors::SurfaceLight, Theme::Colors::TextMuted);
+
+    QString inputStyle = QString(
+        "QLineEdit, QSpinBox { background: %1; border: 1px solid %2; border-radius: 3px; "
+        "padding: 3px 6px; color: %3; font-size: 11px; }"
+        "QSpinBox::up-button, QSpinBox::down-button { width: 12px; }"
+    ).arg(Theme::Colors::SurfaceLight, Theme::Colors::GlassBorder, Theme::Colors::TextPrimary);
+
+    Config &cfg = Config::instance();
+
+    // Grid config
+    addWidget(new QLabel("Grid"));
+    m_colsSpin = new QSpinBox();
+    m_colsSpin->setRange(1, 10);
+    m_colsSpin->setValue(cfg.defaultCols());
+    m_colsSpin->setFixedWidth(42);
+    m_colsSpin->setStyleSheet(inputStyle);
+    addWidget(m_colsSpin);
+
+    addWidget(new QLabel("x"));
+
+    m_rowsSpin = new QSpinBox();
+    m_rowsSpin->setRange(1, 10);
+    m_rowsSpin->setValue(cfg.defaultRows());
+    m_rowsSpin->setFixedWidth(42);
+    m_rowsSpin->setStyleSheet(inputStyle);
+    addWidget(m_rowsSpin);
 
     addSeparator();
 
-    // Fullscreen
-    QAction *fsAction = addAction("Fullscreen");
-    fsAction->setToolTip("Toggle fullscreen (Tab)");
-    connect(fsAction, &QAction::triggered, this, &ToolBar::fullscreenClicked);
+    // Source
+    addWidget(new QLabel("Src"));
+    m_sourceEdit = new QLineEdit();
+    m_sourceEdit->setFixedWidth(200);
+    m_sourceEdit->setStyleSheet(inputStyle);
+    m_sourceEdit->setText(cfg.defaultMediaPath());
+    addWidget(m_sourceEdit);
+
+    auto *browseBtn = new QPushButton("..");
+    browseBtn->setFixedWidth(24);
+    browseBtn->setStyleSheet(btn);
+    connect(browseBtn, &QPushButton::clicked, this, &ToolBar::browseClicked);
+    addWidget(browseBtn);
 
     addSeparator();
 
-    // Playback controls
-    QAction *prevAction = addAction("Prev");
-    prevAction->setToolTip("Previous track");
-    connect(prevAction, &QAction::triggered, this, &ToolBar::prevClicked);
-
-    QAction *playPauseAction = addAction("Play");
-    playPauseAction->setToolTip("Play/Pause all (Space)");
-    connect(playPauseAction, &QAction::triggered, this, &ToolBar::playPauseClicked);
-
-    QAction *nextAction = addAction("Next");
-    nextAction->setToolTip("Next track (E)");
-    connect(nextAction, &QAction::triggered, this, &ToolBar::nextClicked);
-
-    QAction *shuffleAction = addAction("Shuffle");
-    shuffleAction->setToolTip("Shuffle all playlists (Q)");
-    connect(shuffleAction, &QAction::triggered, this, &ToolBar::shuffleClicked);
+    // Filter
+    addWidget(new QLabel("Filter"));
+    m_filterEdit = new QLineEdit();
+    m_filterEdit->setFixedWidth(100);
+    m_filterEdit->setPlaceholderText("AND");
+    m_filterEdit->setStyleSheet(inputStyle);
+    addWidget(m_filterEdit);
 
     addSeparator();
 
-    // Mute
-    QAction *muteAction = addAction("Mute");
-    muteAction->setToolTip("Toggle mute (`)");
-    connect(muteAction, &QAction::triggered, this, &ToolBar::muteClicked);
+    // Start/Stop
+    m_startBtn = new QPushButton("Start");
+    m_startBtn->setStyleSheet(accentBtn);
+    connect(m_startBtn, &QPushButton::clicked, this, &ToolBar::startClicked);
+    addWidget(m_startBtn);
 
-    // Volume slider in a widget
-    auto *volWidget = new QWidget();
-    auto *volLayout = new QHBoxLayout(volWidget);
-    volLayout->setContentsMargins(4, 0, 4, 0);
-    volLayout->setSpacing(4);
+    m_stopBtn = new QPushButton("Stop");
+    m_stopBtn->setStyleSheet(stopBtnStyle);
+    m_stopBtn->setEnabled(false);
+    connect(m_stopBtn, &QPushButton::clicked, this, &ToolBar::stopClicked);
+    addWidget(m_stopBtn);
 
-    m_volumeLabel = new QLabel("Vol");
-    volLayout->addWidget(m_volumeLabel);
+    addSeparator();
+
+    // Playback
+    auto *prevBtn = new QPushButton("|<");
+    prevBtn->setStyleSheet(btn);
+    prevBtn->setFixedWidth(28);
+    connect(prevBtn, &QPushButton::clicked, this, &ToolBar::prevClicked);
+    addWidget(prevBtn);
+
+    auto *playBtn = new QPushButton("||");
+    playBtn->setStyleSheet(btn);
+    playBtn->setFixedWidth(28);
+    connect(playBtn, &QPushButton::clicked, this, &ToolBar::playPauseClicked);
+    addWidget(playBtn);
+
+    auto *nextBtn = new QPushButton(">|");
+    nextBtn->setStyleSheet(btn);
+    nextBtn->setFixedWidth(28);
+    connect(nextBtn, &QPushButton::clicked, this, &ToolBar::nextClicked);
+    addWidget(nextBtn);
+
+    auto *shuffleBtn = new QPushButton("Shuf");
+    shuffleBtn->setStyleSheet(btn);
+    connect(shuffleBtn, &QPushButton::clicked, this, &ToolBar::shuffleClicked);
+    addWidget(shuffleBtn);
+
+    auto *fsBtn = new QPushButton("FS");
+    fsBtn->setStyleSheet(btn);
+    fsBtn->setToolTip("Fullscreen [Tab]");
+    connect(fsBtn, &QPushButton::clicked, this, &ToolBar::fullscreenClicked);
+    addWidget(fsBtn);
+
+    addSeparator();
+
+    // Volume - smaller
+    m_muteBtn = new QPushButton("V");
+    m_muteBtn->setStyleSheet(btn);
+    m_muteBtn->setFixedWidth(24);
+    m_muteBtn->setToolTip("Mute [`]");
+    connect(m_muteBtn, &QPushButton::clicked, this, &ToolBar::muteClicked);
+    addWidget(m_muteBtn);
 
     m_volumeSlider = new QSlider(Qt::Horizontal);
     m_volumeSlider->setRange(0, 100);
-    m_volumeSlider->setFixedWidth(100);
-    m_volumeSlider->setToolTip("Volume (1/2)");
+    m_volumeSlider->setFixedWidth(60);
+    m_volumeSlider->setStyleSheet(Theme::sliderStyle());
     connect(m_volumeSlider, &QSlider::valueChanged, this, [this](int val) {
-        m_volumeLabel->setText(QString("Vol %1%").arg(val));
+        m_volumeLabel->setText(QString::number(val));
         emit volumeChanged(val);
     });
-    volLayout->addWidget(m_volumeSlider);
+    addWidget(m_volumeSlider);
 
-    addWidget(volWidget);
+    m_volumeLabel = new QLabel("30");
+    m_volumeLabel->setFixedWidth(20);
+    addWidget(m_volumeLabel);
 
-    // Set initial volume from config
-    Config &cfg = Config::instance();
-    m_volumeSlider->setValue(cfg.defaultVolume());
+    addSeparator();
 
-    // Spacer to push everything left
+    // Panel toggle
+    auto *panelBtn = new QPushButton("P");
+    panelBtn->setStyleSheet(btn);
+    panelBtn->setFixedWidth(24);
+    panelBtn->setToolTip("Toggle panel");
+    connect(panelBtn, &QPushButton::clicked, this, &ToolBar::toggleSidePanel);
+    addWidget(panelBtn);
+
+    // Spacer
     auto *spacer = new QWidget();
     spacer->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Preferred);
     addWidget(spacer);
+
+    // Hints
+    auto *hints = new QLabel("Y:Pick R:Loop G:Pause");
+    addWidget(hints);
+
+    m_volumeSlider->setValue(cfg.defaultVolume());
 }
 
 void ToolBar::setRunning(bool running)
 {
-    m_startAction->setEnabled(!running);
-    m_stopAction->setEnabled(running);
+    m_startBtn->setEnabled(!running);
+    m_stopBtn->setEnabled(running);
+    m_colsSpin->setEnabled(!running);
+    m_rowsSpin->setEnabled(!running);
+    m_sourceEdit->setEnabled(!running);
+    m_filterEdit->setEnabled(!running);
 }
 
 void ToolBar::setVolume(int volume)
 {
     m_volumeSlider->setValue(volume);
 }
+
+void ToolBar::setMuteActive(bool active)
+{
+    if (active) {
+        m_muteBtn->setText("M");
+        m_muteBtn->setStyleSheet(QString(
+            "QPushButton { background: %1; border: none; border-radius: 3px; padding: 4px 8px; "
+            "color: white; font-weight: 600; font-size: 11px; }"
+        ).arg(Theme::Colors::Error));
+    } else {
+        m_muteBtn->setText("V");
+        m_muteBtn->setStyleSheet(QString(
+            "QPushButton { background: %1; border: 1px solid %2; border-radius: 3px; padding: 4px 8px; "
+            "color: %3; font-size: 11px; }"
+            "QPushButton:hover { background: %4; }"
+        ).arg(Theme::Colors::SurfaceLight, Theme::Colors::GlassBorder,
+              Theme::Colors::TextPrimary, Theme::Colors::SurfaceHover));
+    }
+}
+
+int ToolBar::rows() const { return m_rowsSpin->value(); }
+int ToolBar::cols() const { return m_colsSpin->value(); }
+QString ToolBar::sourceDir() const { return m_sourceEdit->text(); }
+QString ToolBar::filter() const { return m_filterEdit->text().trimmed(); }
+void ToolBar::setSourceDir(const QString &dir) { m_sourceEdit->setText(dir); }

@@ -12,7 +12,6 @@
 #include "gridcell.h"
 #include "toolbar.h"
 #include "sidepanel.h"
-#include "configpanel.h"
 
 // Constants
 namespace MainWindowConstants {
@@ -107,14 +106,16 @@ private:
     // New UI components
     ToolBar *m_toolBar = nullptr;
     SidePanel *m_sidePanel = nullptr;
-    ConfigPanel *m_configPanel = nullptr;
     QLabel *m_statusLabel = nullptr;
+    QLabel *m_runningIndicator = nullptr;
+    QLabel *m_cellCountLabel = nullptr;
 
     QVector<GridCell*> m_cells;
     QMap<QPair<int,int>, GridCell*> m_cellMap;
 
     bool m_isFullscreen = false;
     bool m_isTileFullscreen = false;
+    bool m_isMuted = false;
     GridCell *m_fullscreenCell = nullptr;
     GridCell *m_selectedCell = nullptr;
     int m_selectedRow = -1;

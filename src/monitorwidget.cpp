@@ -1,4 +1,5 @@
 #include "monitorwidget.h"
+#include "theme.h"
 #include <QVBoxLayout>
 #include <QHeaderView>
 #include <QMenu>
@@ -33,25 +34,10 @@ void MonitorWidget::setupUi()
     m_table->setAlternatingRowColors(true);
     m_table->setContextMenuPolicy(Qt::CustomContextMenu);
     m_table->verticalHeader()->setVisible(false);
+    m_table->setShowGrid(false);
 
-    m_table->setStyleSheet(R"(
-        QTableWidget {
-            background-color: #1e1e1e;
-            gridline-color: #333;
-            color: #ccc;
-            border: none;
-        }
-        QTableWidget::item { padding: 4px; }
-        QTableWidget::item:selected { background-color: #3a5a8a; }
-        QTableWidget::item:alternate { background-color: #222; }
-        QHeaderView::section {
-            background-color: #2a2a2a;
-            color: #aaa;
-            padding: 6px;
-            border: none;
-            border-bottom: 1px solid #333;
-        }
-    )");
+    // Apply 2026 theme
+    m_table->setStyleSheet(Theme::tableStyle());
 
     connect(m_table, &QWidget::customContextMenuRequested, this, &MonitorWidget::onContextMenu);
     connect(m_table, &QTableWidget::itemDoubleClicked, this, &MonitorWidget::onItemDoubleClicked);

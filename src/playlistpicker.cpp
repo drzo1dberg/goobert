@@ -1,57 +1,65 @@
 #include "playlistpicker.h"
+#include "theme.h"
 #include <QKeyEvent>
 #include <QFileInfo>
+#include <QGraphicsDropShadowEffect>
+#include <QPushButton>
 
 PlaylistPicker::PlaylistPicker(const QStringList &playlist, QWidget *parent)
     : QDialog(parent)
     , m_fullPlaylist(playlist)
 {
     setWindowTitle("Select a playlist entry");
-    setMinimumSize(500, 400);
-    resize(600, 500);
+    setMinimumSize(800, 500);
+    resize(1000, 700);
+    setWindowFlags(Qt::Dialog | Qt::FramelessWindowHint);
+    setAttribute(Qt::WA_TranslucentBackground);
 
-    // Dark theme styling
-    setStyleSheet(R"(
-        QDialog {
-            background-color: #1a1a1a;
-            color: #ddd;
-        }
-        QLineEdit {
-            background-color: #2a2a2a;
-            color: #fff;
-            border: 1px solid #444;
-            border-radius: 4px;
-            padding: 8px;
-            font-size: 14px;
-        }
-        QLineEdit:focus {
-            border-color: #4a9eff;
-        }
-        QListWidget {
-            background-color: #2a2a2a;
-            color: #ddd;
-            border: 1px solid #444;
-            border-radius: 4px;
-            font-size: 13px;
-        }
-        QListWidget::item {
-            padding: 6px;
-        }
-        QListWidget::item:selected {
-            background-color: #4a9eff;
-            color: #fff;
-        }
-        QListWidget::item:hover {
-            background-color: #3a3a3a;
-        }
-        QLabel {
-            color: #888;
-            font-size: 12px;
-        }
-    )");
+    // Apply 2026 theme with glassmorphism
+    setStyleSheet(Theme::dialogStyle() + Theme::inputStyle() + Theme::listWidgetStyle());
 
-    auto *layout = new QVBoxLayout(this);
-    layout->setSpacing(8);
+    // Main container with glass effect
+    auto *container = new QWidget(this);
+    container->setObjectName("PickerContainer");
+    container->setStyleSheet(QString(
+        "QWidget#PickerContainer {"
+        "  background: %1;"
+        "  border: 1px solid %2;"
+        "  border-radius: %3px;"
+        "}"
+    ).arg(Theme::Colors::GlassBg, Theme::Colors::GlassBorder, QString::number(Theme::Radius::XL)));
+
+    // Add shadow to container
+    Theme::addShadow(container, 30, 8);
+
+    auto *outerLayout = new QVBoxLayout(this);
+    outerLayout->setContentsMargins(Theme::Spacing::LG, Theme::Spacing::LG, Theme::Spacing::LG, Theme::Spacing::LG);
+    outerLayout->addWidget(container);
+
+    auto *layout = new QVBoxLayout(container);
+    layout->setContentsMargins(Theme::Spacing::XL, Theme::Spacing::XL, Theme::Spacing::XL, Theme::Spacing::XL);
+    layout->setSpacing(Theme::Spacing::MD);
+
+    // Header with title and close button
+    auto *headerLayout = new QHBoxLayout();
+    auto *titleLabel = new QLabel("Select File", this);
+    titleLabel->setStyleSheet(QString(
+        "font-size: 16px; font-weight: 600; color: %1;"
+    ).arg(Theme::Colors::TextPrimary));
+    headerLayout->addWidget(titleLabel);
+    headerLayout->addStretch();
+
+    auto *closeBtn = new QPushButton("x", this);
+    closeBtn->setFixedSize(24, 24);
+    closeBtn->setCursor(Qt::PointingHandCursor);
+    closeBtn->setStyleSheet(QString(
+        "QPushButton { background: %1; border: none; border-radius: 12px; color: %2; font-size: 12px; font-weight: bold; }"
+        "QPushButton:hover { background: %3; color: white; }"
+    ).arg(Theme::Colors::SurfaceHover, Theme::Colors::TextSecondary, Theme::Colors::Error));
+    connect(closeBtn, &QPushButton::clicked, this, &QDialog::reject);
+    headerLayout->addWidget(closeBtn);
+
+    layout->addLayout(headerLayout);
 
     // Search input
     m_searchEdit = new QLineEdit(this);
@@ -60,11 +68,23 @@ PlaylistPicker::PlaylistPicker(const QStringList &playlist, QWidget *parent)
 
     // Count label
     m_countLabel = new QLabel(this);
+    m_countLabel->setStyleSheet(QString("color: %1; font-size: 12px;").arg(Theme::Colors::TextMuted));
     layout->addWidget(m_countLabel);
 
-    // List widget
+    // List widget - no word wrap, elide long text
     m_listWidget = new QListWidget(this);
+    m_listWidget->setWordWrap(false);
+    m_listWidget->setTextElideMode(Qt::ElideMiddle);
+    m_listWidget->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
     layout->addWidget(m_listWidget, 1);
+
+    // Keyboard hints at bottom
+    auto *hintsLabel = new QLabel("↑↓ Navigate  •  Enter Select  •  Esc Close", this);
+    hintsLabel->setAlignment(Qt::AlignCenter);
+    hintsLabel->setStyleSheet(QString(
+        "color: %1; font-size: 11px; padding: 8px; background: %2; border-radius: %3px;"
+    ).arg(Theme::Colors::TextMuted, Theme::Colors::SurfaceLight, QString::number(Theme::Radius::SM)));
+    layout->addWidget(hintsLabel);
 
     // Build display names
     m_displayNames.reserve(m_fullPlaylist.size());
@@ -111,7 +131,7 @@ void PlaylistPicker::updateList()
     if (m_searchText.isEmpty()) {
         m_countLabel->setText(QString("%1 files").arg(m_fullPlaylist.size()));
     } else {
-        m_countLabel->setText(QString("%1 / %2 matches").arg(matchCount).arg(m_fullPlaylist.size()));
+        m_countLabel->setText(QString("%1 of %2 matches").arg(matchCount).arg(m_fullPlaylist.size()));
     }
 
     // Select first item if available

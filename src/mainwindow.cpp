@@ -3,6 +3,7 @@
 #include "config.h"
 #include "keymap.h"
 #include "playlistpicker.h"
+#include "theme.h"
 #include <QKeyEvent>
 #include <QWheelEvent>
 #include <QMouseEvent>
@@ -14,6 +15,7 @@
 #include <QDateTime>
 #include <QStatusBar>
 #include <QFileInfo>
+#include <QFileDialog>
 #include <random>
 #include <algorithm>
 #include <utility>
@@ -41,23 +43,19 @@ void MainWindow::setupUi()
 {
     using namespace MainWindowConstants;
 
-    // Main window styling with global tooltip fix
-    setStyleSheet(R"(
-        QMainWindow { background-color: #1a1a1a; }
-        QToolTip {
-            background-color: #2a2a2a;
-            color: #ddd;
-            border: 1px solid #555;
-            padding: 6px;
-            font-size: 12px;
-        }
-    )");
+    // Apply 2026 theme
+    setStyleSheet(Theme::mainWindowStyle());
 
     // Toolbar at top
     m_toolBar = new ToolBar(this);
     m_toolBar->installEventFilter(this);
     m_toolBar->setToolTip(KeyMap::instance().generateTooltip());
     addToolBar(Qt::TopToolBarArea, m_toolBar);
+
+    // Set source directory from command line if provided
+    if (!m_sourceDir.isEmpty()) {
+        m_toolBar->setSourceDir(m_sourceDir);
+    }
 
     // Central widget with horizontal splitter
     m_centralWidget = new QWidget(this);
@@ -67,14 +65,10 @@ void MainWindow::setupUi()
     mainLayout->setContentsMargins(0, 0, 0, 0);
     mainLayout->setSpacing(0);
 
-    // Config panel (collapsible, above splitter)
-    m_configPanel = new ConfigPanel(m_sourceDir);
-    m_configPanel->installEventFilter(this);
-    mainLayout->addWidget(m_configPanel);
-
     // Horizontal splitter: side panel | video wall
     m_splitter = new QSplitter(Qt::Horizontal, m_centralWidget);
-    m_splitter->setStyleSheet("QSplitter::handle { background-color: #333; }");
+    m_splitter->setStyleSheet(QString("QSplitter::handle { background: %1; width: 2px; }")
+        .arg(Theme::Colors::GlassBorder));
     mainLayout->addWidget(m_splitter, 1);  // stretch factor 1
 
     // Side panel (left)
@@ -85,7 +79,8 @@ void MainWindow::setupUi()
 
     // Wall container (right, main area)
     m_wallContainer = new QWidget(m_splitter);
-    m_wallContainer->setStyleSheet("background-color: #0a0a0a;");
+    m_wallContainer->setStyleSheet(QString("background-color: %1; border-radius: %2px;")
+        .arg(Theme::Colors::Background).arg(Theme::Radius::MD));
     m_gridLayout = new QGridLayout(m_wallContainer);
     m_gridLayout->setContentsMargins(kGridMargin, kGridMargin, kGridMargin, kGridMargin);
     m_gridLayout->setSpacing(kGridSpacing);
@@ -94,13 +89,29 @@ void MainWindow::setupUi()
     // Set stretch factors: side panel fixed, wall expands
     m_splitter->setStretchFactor(0, 0);  // Side panel doesn't stretch
     m_splitter->setStretchFactor(1, 1);  // Wall stretches
-    m_splitter->setSizes({280, 1000});
+    m_splitter->setSizes({300, 1000});
 
-    // Status bar
+    // Status bar with modern styling
+    statusBar()->setStyleSheet(QString(
+        "QStatusBar { background: %1; border-top: 1px solid %2; }"
+        "QStatusBar::item { border: none; }"
+    ).arg(Theme::Colors::Surface, Theme::Colors::GlassBorder));
+
+    // Running indicator (left)
+    m_runningIndicator = new QLabel("●");
+    m_runningIndicator->setStyleSheet(QString("color: %1; font-size: 14px; padding: 0 8px;").arg(Theme::Colors::TextMuted));
+    statusBar()->addWidget(m_runningIndicator);
+
+    // Main status message
     m_statusLabel = new QLabel("Ready");
-    m_statusLabel->setStyleSheet("color: #666; padding: 4px;");
+    m_statusLabel->setStyleSheet(QString("color: %1; padding: 8px 12px; font-size: 12px;")
+        .arg(Theme::Colors::TextSecondary));
     statusBar()->addWidget(m_statusLabel, 1);
-    statusBar()->setStyleSheet("QStatusBar { background-color: #1a1a1a; border-top: 1px solid #333; }");
+
+    // Cell count indicator (right)
+    m_cellCountLabel = new QLabel("");
+    m_cellCountLabel->setStyleSheet(QString("color: %1; font-size: 11px; padding: 0 12px;").arg(Theme::Colors::TextMuted));
+    statusBar()->addPermanentWidget(m_cellCountLabel);
 
     // Connect toolbar signals
     connect(m_toolBar, &ToolBar::startClicked, this, &MainWindow::startGrid);
@@ -112,11 +123,14 @@ void MainWindow::setupUi()
     connect(m_toolBar, &ToolBar::shuffleClicked, this, &MainWindow::shuffleAll);
     connect(m_toolBar, &ToolBar::muteClicked, this, &MainWindow::muteAll);
     connect(m_toolBar, &ToolBar::volumeChanged, this, &MainWindow::setVolumeAll);
-
-    // Connect config panel signals
-    connect(m_configPanel, &ConfigPanel::gridSizeChanged, this, [this](int rows, int cols) {
-        m_rows = rows;
-        m_cols = cols;
+    connect(m_toolBar, &ToolBar::toggleSidePanel, this, [this]() {
+        m_sidePanel->setVisible(!m_sidePanel->isVisible());
+    });
+    connect(m_toolBar, &ToolBar::browseClicked, this, [this]() {
+        QString dir = QFileDialog::getExistingDirectory(this, "Select Media Directory", m_toolBar->sourceDir());
+        if (!dir.isEmpty()) {
+            m_toolBar->setSourceDir(dir);
+        }
     });
 
     // Connect side panel signals
@@ -135,10 +149,10 @@ void MainWindow::setupUi()
 
 void MainWindow::startGrid()
 {
-    m_sourceDir = m_configPanel->sourceDir();
-    m_rows = m_configPanel->rows();
-    m_cols = m_configPanel->cols();
-    QString filter = m_configPanel->filter();
+    m_sourceDir = m_toolBar->sourceDir();
+    m_rows = m_toolBar->rows();
+    m_cols = m_toolBar->cols();
+    QString filter = m_toolBar->filter();
 
     // Scan for media files with optional filter
     FileScanner scanner;
@@ -183,7 +197,8 @@ void MainWindow::startGrid()
     }
 
     m_toolBar->setRunning(true);
-    m_configPanel->setEnabled(false);
+    m_runningIndicator->setStyleSheet(QString("color: %1; font-size: 14px; padding: 0 8px;").arg(Theme::Colors::Success));
+    m_cellCountLabel->setText(QString("%1 cells • %2 files").arg(m_rows * m_cols).arg(files.size()));
     log(QString("Started %1x%2 grid").arg(m_cols).arg(m_rows));
 
     // Auto-select first cell
@@ -215,7 +230,10 @@ void MainWindow::stopGrid()
     m_selectedRow = -1;
     m_selectedCol = -1;
     m_toolBar->setRunning(false);
-    m_configPanel->setEnabled(true);
+    m_toolBar->setMuteActive(false);
+    m_isMuted = false;
+    m_runningIndicator->setStyleSheet(QString("color: %1; font-size: 14px; padding: 0 8px;").arg(Theme::Colors::TextMuted));
+    m_cellCountLabel->setText("");
     m_sidePanel->monitor()->clear();
     m_sidePanel->playlist()->clear();
     log("Stopped");
@@ -408,7 +426,6 @@ void MainWindow::toggleFullscreen()
     } else {
         m_isFullscreen = true;
         m_toolBar->hide();
-        m_configPanel->hide();
         m_sidePanel->hide();
         statusBar()->hide();
         showFullScreen();
@@ -425,7 +442,6 @@ void MainWindow::exitFullscreen()
         m_isFullscreen = false;
         showNormal();
         m_toolBar->show();
-        m_configPanel->show();
         m_sidePanel->show();
         statusBar()->show();
         log("Fullscreen OFF");
@@ -567,9 +583,15 @@ void MainWindow::shuffleAll()
 
 void MainWindow::muteAll()
 {
+    m_isMuted = !m_isMuted;
     for (GridCell *cell : m_cells) {
-        cell->toggleMute();
+        if (m_isMuted) {
+            cell->mute();
+        } else {
+            cell->unmute();
+        }
     }
+    m_toolBar->setMuteActive(m_isMuted);
 }
 
 void MainWindow::setVolumeAll(int volume)
@@ -635,10 +657,10 @@ void MainWindow::togglePauseSelected()
 
 void MainWindow::showPlaylistPicker()
 {
-    if (!m_selectedCell || m_selectedRow < 0 || m_selectedCol < 0) return;
+    if (!m_selectedCell) return;
 
-    // Get playlist for selected cell
-    QStringList playlist = m_cellPlaylists.value({m_selectedRow, m_selectedCol});
+    // Get actual playlist from mpv (matches internal order)
+    QStringList playlist = m_selectedCell->currentPlaylist();
     if (playlist.isEmpty()) return;
 
     // Show picker dialog
@@ -646,9 +668,10 @@ void MainWindow::showPlaylistPicker()
     if (picker.exec() == QDialog::Accepted) {
         int index = picker.selectedIndex();
         if (index >= 0) {
-            // Jump to index in existing playlist (preserves playlist order)
+            // Jump to index and set to loop infinite (excludes from next/prev)
             m_selectedCell->playIndex(index);
-            log(QString("Playing %1").arg(QFileInfo(picker.selectedFile()).fileName()));
+            m_selectedCell->setLoopFile(true);
+            log(QString("Playing %1 (looped)").arg(QFileInfo(picker.selectedFile()).fileName()));
         }
     }
 }
