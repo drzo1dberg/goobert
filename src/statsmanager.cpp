@@ -313,6 +313,37 @@ bool StatsManager::createTables()
         return false;
     }
 
+    // Favorites table
+    ok = query.exec(R"(
+        CREATE TABLE IF NOT EXISTS favorites (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            file_id INTEGER UNIQUE NOT NULL,
+            added_at INTEGER DEFAULT (strftime('%s', 'now') * 1000),
+            FOREIGN KEY (file_id) REFERENCES file_stats(id)
+        )
+    )");
+
+    if (!ok) {
+        qWarning() << "Failed to create favorites table:" << query.lastError().text();
+        return false;
+    }
+
+    // Position samples table (for heatmap)
+    ok = query.exec(R"(
+        CREATE TABLE IF NOT EXISTS position_samples (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            file_id INTEGER NOT NULL,
+            position_pct INTEGER NOT NULL,
+            timestamp INTEGER NOT NULL,
+            FOREIGN KEY (file_id) REFERENCES file_stats(id)
+        )
+    )");
+
+    if (!ok) {
+        qWarning() << "Failed to create position_samples table:" << query.lastError().text();
+        return false;
+    }
+
     // Create indices
     query.exec("CREATE INDEX IF NOT EXISTS idx_file_stats_path ON file_stats(file_path)");
     query.exec("CREATE INDEX IF NOT EXISTS idx_file_stats_last_watched ON file_stats(last_watched_at DESC)");
@@ -332,6 +363,9 @@ bool StatsManager::createTables()
     query.exec("CREATE INDEX IF NOT EXISTS idx_fullscreen_events_timestamp ON fullscreen_events(timestamp DESC)");
     query.exec("CREATE INDEX IF NOT EXISTS idx_grid_events_timestamp ON grid_events(timestamp DESC)");
     query.exec("CREATE INDEX IF NOT EXISTS idx_rotation_events_file ON rotation_events(file_id)");
+    query.exec("CREATE INDEX IF NOT EXISTS idx_favorites_file ON favorites(file_id)");
+    query.exec("CREATE INDEX IF NOT EXISTS idx_position_samples_file ON position_samples(file_id)");
+    query.exec("CREATE INDEX IF NOT EXISTS idx_position_samples_pct ON position_samples(position_pct)");
 
     return true;
 }
@@ -624,11 +658,16 @@ QList<FileStats> StatsManager::getMostWatched(int limit) const
 
     QSqlQuery query(m_db);
     query.prepare(R"(
-        SELECT id, file_path, total_watch_ms, play_count, last_watched_at,
-               last_position_ms, duration_ms, is_image
-        FROM file_stats
-        WHERE total_watch_ms > 0
-        ORDER BY total_watch_ms DESC
+        SELECT fs.id, fs.file_path, fs.total_watch_ms, fs.play_count, fs.last_watched_at,
+               fs.last_position_ms, fs.duration_ms, fs.is_image,
+               COALESCE(skip_cnt.cnt, 0) as skip_count,
+               COALESCE(loop_cnt.cnt, 0) as loop_count,
+               CASE WHEN fs.duration_ms > 0 THEN (fs.last_position_ms * 100.0 / fs.duration_ms) ELSE 0 END as avg_pct
+        FROM file_stats fs
+        LEFT JOIN (SELECT file_id, COUNT(*) as cnt FROM skip_events GROUP BY file_id) skip_cnt ON fs.id = skip_cnt.file_id
+        LEFT JOIN (SELECT file_id, COUNT(*) as cnt FROM loop_events GROUP BY file_id) loop_cnt ON fs.id = loop_cnt.file_id
+        WHERE fs.total_watch_ms > 0
+        ORDER BY fs.total_watch_ms DESC
         LIMIT ?
     )");
     query.addBindValue(limit);
@@ -644,6 +683,9 @@ QList<FileStats> StatsManager::getMostWatched(int limit) const
             stats.lastPositionMs = query.value(5).toLongLong();
             stats.durationMs = query.value(6).toLongLong();
             stats.isImage = query.value(7).toBool();
+            stats.skipCount = query.value(8).toInt();
+            stats.loopCount = query.value(9).toInt();
+            stats.avgWatchPercent = query.value(10).toDouble();
             result.append(stats);
         }
     }
@@ -1726,5 +1768,407 @@ void StatsManager::clearAllStats()
     query.exec("DELETE FROM grid_events");
     query.exec("DELETE FROM rotation_events");
     query.exec("DELETE FROM rename_history");
+    query.exec("DELETE FROM favorites");
+    query.exec("DELETE FROM position_samples");
     query.exec("DELETE FROM file_stats");
+}
+
+// ============ Favorites Methods ============
+
+void StatsManager::toggleFavorite(const QString &filePath)
+{
+    if (!m_initialized || filePath.isEmpty()) return;
+
+    qint64 fileId = getOrCreateFileId(filePath, 0, false);
+    if (fileId < 0) return;
+
+    QSqlQuery query(m_db);
+
+    // Check if already favorite
+    query.prepare("SELECT id FROM favorites WHERE file_id = ?");
+    query.addBindValue(fileId);
+
+    if (query.exec() && query.next()) {
+        // Remove from favorites
+        query.prepare("DELETE FROM favorites WHERE file_id = ?");
+        query.addBindValue(fileId);
+        query.exec();
+    } else {
+        // Add to favorites
+        query.prepare("INSERT INTO favorites (file_id) VALUES (?)");
+        query.addBindValue(fileId);
+        query.exec();
+    }
+}
+
+bool StatsManager::isFavorite(const QString &filePath) const
+{
+    if (!m_initialized) return false;
+
+    QSqlQuery query(m_db);
+    query.prepare(R"(
+        SELECT f.id FROM favorites f
+        JOIN file_stats fs ON f.file_id = fs.id
+        WHERE fs.file_path = ?
+    )");
+    query.addBindValue(filePath);
+
+    return query.exec() && query.next();
+}
+
+QList<FileStats> StatsManager::getFavorites() const
+{
+    QList<FileStats> result;
+    if (!m_initialized) return result;
+
+    QSqlQuery query(m_db);
+    query.prepare(R"(
+        SELECT fs.id, fs.file_path, fs.total_watch_ms, fs.play_count, fs.last_watched_at,
+               fs.last_position_ms, fs.duration_ms, fs.is_image, f.added_at
+        FROM favorites f
+        JOIN file_stats fs ON f.file_id = fs.id
+        ORDER BY f.added_at DESC
+    )");
+
+    if (query.exec()) {
+        while (query.next()) {
+            FileStats stats;
+            stats.id = query.value(0).toLongLong();
+            stats.filePath = query.value(1).toString();
+            stats.totalWatchMs = query.value(2).toLongLong();
+            stats.playCount = query.value(3).toInt();
+            stats.lastWatchedAt = query.value(4).toLongLong();
+            stats.lastPositionMs = query.value(5).toLongLong();
+            stats.durationMs = query.value(6).toLongLong();
+            stats.isImage = query.value(7).toBool();
+            result.append(stats);
+        }
+    }
+    return result;
+}
+
+int StatsManager::getFavoriteCount() const
+{
+    if (!m_initialized) return 0;
+
+    QSqlQuery query(m_db);
+    if (query.exec("SELECT COUNT(*) FROM favorites") && query.next()) {
+        return query.value(0).toInt();
+    }
+    return 0;
+}
+
+// ============ Position Sampling Methods ============
+
+void StatsManager::logPositionSample(const QString &filePath, double positionPct)
+{
+    if (!m_initialized || filePath.isEmpty()) return;
+
+    qint64 fileId = getOrCreateFileId(filePath, 0, false);
+    if (fileId < 0) return;
+
+    // Bucket into 5% increments (0-100 in steps of 5 = 20 buckets)
+    int bucket = qBound(0, static_cast<int>(positionPct / 5) * 5, 100);
+
+    QSqlQuery query(m_db);
+    query.prepare(R"(
+        INSERT INTO position_samples (file_id, position_pct, timestamp)
+        VALUES (?, ?, ?)
+    )");
+    query.addBindValue(fileId);
+    query.addBindValue(bucket);
+    query.addBindValue(QDateTime::currentMSecsSinceEpoch());
+    query.exec();
+}
+
+QMap<int, int> StatsManager::getPositionHeatmap(const QString &filePath) const
+{
+    QMap<int, int> result;
+    if (!m_initialized) return result;
+
+    // Initialize all buckets
+    for (int i = 0; i <= 100; i += 5) {
+        result[i] = 0;
+    }
+
+    QSqlQuery query(m_db);
+    if (filePath.isEmpty()) {
+        query.prepare("SELECT position_pct, COUNT(*) as cnt FROM position_samples GROUP BY position_pct");
+    } else {
+        query.prepare(R"(
+            SELECT ps.position_pct, COUNT(*) as cnt
+            FROM position_samples ps
+            JOIN file_stats fs ON ps.file_id = fs.id
+            WHERE fs.file_path = ?
+            GROUP BY ps.position_pct
+        )");
+        query.addBindValue(filePath);
+    }
+
+    if (query.exec()) {
+        while (query.next()) {
+            int pct = query.value(0).toInt();
+            result[pct] = query.value(1).toInt();
+        }
+    }
+    return result;
+}
+
+// ============ Advanced Analytics Methods ============
+
+QMap<int, qint64> StatsManager::getSessionLengthDistribution() const
+{
+    QMap<int, qint64> result;
+    if (!m_initialized) return result;
+
+    // Buckets: <30s, 30s-1m, 1-2m, 2-5m, 5-10m, 10-30m, 30m-1h, >1h
+    result[0] = 0;    // <30s
+    result[30] = 0;   // 30s-1m
+    result[60] = 0;   // 1-2m
+    result[120] = 0;  // 2-5m
+    result[300] = 0;  // 5-10m
+    result[600] = 0;  // 10-30m
+    result[1800] = 0; // 30m-1h
+    result[3600] = 0; // >1h
+
+    QSqlQuery query(m_db);
+    if (query.exec("SELECT duration_ms FROM watch_sessions WHERE duration_ms > 0")) {
+        while (query.next()) {
+            qint64 durationSec = query.value(0).toLongLong() / 1000;
+
+            if (durationSec < 30) result[0]++;
+            else if (durationSec < 60) result[30]++;
+            else if (durationSec < 120) result[60]++;
+            else if (durationSec < 300) result[120]++;
+            else if (durationSec < 600) result[300]++;
+            else if (durationSec < 1800) result[600]++;
+            else if (durationSec < 3600) result[1800]++;
+            else result[3600]++;
+        }
+    }
+    return result;
+}
+
+QPair<qint64, qint64> StatsManager::getFileTypeBreakdown() const
+{
+    QPair<qint64, qint64> result{0, 0}; // video_ms, image_ms
+    if (!m_initialized) return result;
+
+    QSqlQuery query(m_db);
+    if (query.exec("SELECT is_image, SUM(total_watch_ms) FROM file_stats GROUP BY is_image")) {
+        while (query.next()) {
+            if (query.value(0).toBool()) {
+                result.second = query.value(1).toLongLong(); // images
+            } else {
+                result.first = query.value(1).toLongLong(); // videos
+            }
+        }
+    }
+    return result;
+}
+
+QMap<QString, int> StatsManager::getSkipTypeBreakdown() const
+{
+    QMap<QString, int> result;
+    if (!m_initialized) return result;
+
+    QSqlQuery query(m_db);
+    if (query.exec("SELECT skip_type, COUNT(*) FROM skip_events GROUP BY skip_type")) {
+        while (query.next()) {
+            result[query.value(0).toString()] = query.value(1).toInt();
+        }
+    }
+    return result;
+}
+
+QMap<int, int> StatsManager::getSkipPositionHeatmap() const
+{
+    QMap<int, int> result;
+    if (!m_initialized) return result;
+
+    // Initialize buckets (0-100% in 10% steps)
+    for (int i = 0; i <= 100; i += 10) {
+        result[i] = 0;
+    }
+
+    QSqlQuery query(m_db);
+    query.prepare(R"(
+        SELECT
+            CAST(se.from_position_ms * 100.0 / fs.duration_ms AS INTEGER) / 10 * 10 as bucket
+        FROM skip_events se
+        JOIN file_stats fs ON se.file_id = fs.id
+        WHERE fs.duration_ms > 0
+    )");
+
+    if (query.exec()) {
+        while (query.next()) {
+            int bucket = qBound(0, query.value(0).toInt(), 100);
+            result[bucket]++;
+        }
+    }
+    return result;
+}
+
+int StatsManager::getMaxConcurrentCells() const
+{
+    if (!m_initialized) return 0;
+
+    // Find max overlapping sessions
+    QSqlQuery query(m_db);
+    query.prepare(R"(
+        SELECT MAX(concurrent) FROM (
+            SELECT COUNT(*) as concurrent
+            FROM watch_sessions ws1
+            JOIN watch_sessions ws2 ON ws1.started_at <= ws2.started_at AND ws1.ended_at >= ws2.started_at
+            GROUP BY ws1.id
+        )
+    )");
+
+    if (query.exec() && query.next()) {
+        return query.value(0).toInt();
+    }
+    return 1;
+}
+
+double StatsManager::getAverageConcurrentCells() const
+{
+    if (!m_initialized) return 1.0;
+
+    // Simple estimate: total accumulated / real elapsed
+    QSqlQuery query(m_db);
+    query.prepare(R"(
+        SELECT
+            COALESCE(SUM(duration_ms), 0) as total,
+            (MAX(ended_at) - MIN(started_at)) as elapsed
+        FROM watch_sessions
+        WHERE started_at > 0
+    )");
+
+    if (query.exec() && query.next()) {
+        qint64 total = query.value(0).toLongLong();
+        qint64 elapsed = query.value(1).toLongLong();
+        if (elapsed > 0) {
+            return static_cast<double>(total) / elapsed;
+        }
+    }
+    return 1.0;
+}
+
+QList<QPair<QString, qint64>> StatsManager::getWeeklyTrend(int weeks) const
+{
+    QList<QPair<QString, qint64>> result;
+    if (!m_initialized) return result;
+
+    QSqlQuery query(m_db);
+    query.prepare(R"(
+        SELECT
+            strftime('%Y-W%W', started_at / 1000, 'unixepoch', 'localtime') as week,
+            SUM(duration_ms) as total
+        FROM watch_sessions
+        WHERE started_at >= ?
+        GROUP BY week
+        ORDER BY week
+    )");
+    query.addBindValue(QDateTime::currentDateTime().addDays(-weeks * 7).toMSecsSinceEpoch());
+
+    if (query.exec()) {
+        while (query.next()) {
+            result.append({query.value(0).toString(), query.value(1).toLongLong()});
+        }
+    }
+    return result;
+}
+
+QList<QPair<QString, qint64>> StatsManager::getMonthlyTrend(int months) const
+{
+    QList<QPair<QString, qint64>> result;
+    if (!m_initialized) return result;
+
+    QSqlQuery query(m_db);
+    query.prepare(R"(
+        SELECT
+            strftime('%Y-%m', started_at / 1000, 'unixepoch', 'localtime') as month,
+            SUM(duration_ms) as total
+        FROM watch_sessions
+        WHERE started_at >= ?
+        GROUP BY month
+        ORDER BY month
+    )");
+    query.addBindValue(QDateTime::currentDateTime().addMonths(-months).toMSecsSinceEpoch());
+
+    if (query.exec()) {
+        while (query.next()) {
+            result.append({query.value(0).toString(), query.value(1).toLongLong()});
+        }
+    }
+    return result;
+}
+
+QMap<QString, TimeRangeStats> StatsManager::getDirectoryTimeAnalysis(int limit) const
+{
+    QMap<QString, TimeRangeStats> result;
+    if (!m_initialized) return result;
+
+    // Get top directories
+    auto dirs = getDirectoryStats(limit);
+
+    for (const auto &dir : dirs) {
+        TimeRangeStats stats;
+        stats.totalWatchMs = dir.totalWatchMs;
+        stats.fileCount = dir.fileCount;
+
+        // Get session count and other stats for this directory
+        QSqlQuery query(m_db);
+        query.prepare(R"(
+            SELECT COUNT(*), COUNT(DISTINCT ws.file_id)
+            FROM watch_sessions ws
+            JOIN file_stats fs ON ws.file_id = fs.id
+            WHERE fs.file_path LIKE ?
+        )");
+        query.addBindValue(dir.directoryPath + "/%");
+
+        if (query.exec() && query.next()) {
+            stats.sessionCount = query.value(0).toInt();
+        }
+
+        result[dir.directoryPath] = stats;
+    }
+    return result;
+}
+
+int StatsManager::getCompletionCount(double thresholdPct) const
+{
+    if (!m_initialized) return 0;
+
+    QSqlQuery query(m_db);
+    query.prepare(R"(
+        SELECT COUNT(*) FROM file_stats
+        WHERE duration_ms > 0
+        AND (last_position_ms * 100.0 / duration_ms) >= ?
+    )");
+    query.addBindValue(thresholdPct);
+
+    if (query.exec() && query.next()) {
+        return query.value(0).toInt();
+    }
+    return 0;
+}
+
+int StatsManager::getEarlySkipCount(double thresholdPct) const
+{
+    if (!m_initialized) return 0;
+
+    QSqlQuery query(m_db);
+    query.prepare(R"(
+        SELECT COUNT(*) FROM skip_events se
+        JOIN file_stats fs ON se.file_id = fs.id
+        WHERE fs.duration_ms > 0
+        AND (se.from_position_ms * 100.0 / fs.duration_ms) < ?
+    )");
+    query.addBindValue(thresholdPct);
+
+    if (query.exec() && query.next()) {
+        return query.value(0).toInt();
+    }
+    return 0;
 }

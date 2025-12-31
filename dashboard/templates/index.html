@@ -327,6 +327,43 @@
             white-space: nowrap;
             max-width: 400px;
         }
+
+        .open-btn {
+            background: var(--success);
+            border: none;
+            color: black;
+            padding: 2px 8px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 11px;
+            margin-left: 4px;
+        }
+
+        .open-btn:hover {
+            background: #00cc77;
+        }
+
+        .toast {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%) translateY(100px);
+            background: var(--bg-card);
+            border: 1px solid var(--accent);
+            color: var(--text-primary);
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-size: 14px;
+            z-index: 1000;
+            opacity: 0;
+            transition: all 0.3s;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+        }
+
+        .toast.show {
+            transform: translateX(-50%) translateY(0);
+            opacity: 1;
+        }
     </style>
 </head>
 <body>
@@ -444,6 +481,159 @@
             </div>
         </div>
 
+        <!-- Completion & File Type Stats -->
+        <div class="section">
+            <h2 class="section-title">Content Analysis</h2>
+            <div class="grid grid-4">
+                <div class="card stat-card">
+                    <div class="stat-value success" id="full-watch">--</div>
+                    <div class="stat-label">Fully Watched (>90%)</div>
+                </div>
+                <div class="card stat-card">
+                    <div class="stat-value" id="partial-watch">--</div>
+                    <div class="stat-label">Partial Watch</div>
+                </div>
+                <div class="card stat-card">
+                    <div class="stat-value" style="color: var(--warning)" id="skipped-files">--</div>
+                    <div class="stat-label">Skipped (<10%)</div>
+                </div>
+                <div class="card stat-card">
+                    <div class="stat-value accent" id="avg-completion">--</div>
+                    <div class="stat-label">Avg Completion %</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- File Type & Concurrent Stats -->
+        <div class="section">
+            <div class="grid grid-2">
+                <div class="card">
+                    <div class="card-header">
+                        <span class="card-title">File Type Breakdown</span>
+                    </div>
+                    <div class="chart-container" style="height: 200px;">
+                        <canvas id="fileTypeChart"></canvas>
+                    </div>
+                    <div class="grid grid-2" style="margin-top: 16px;">
+                        <div class="stat-card" style="padding: 12px;">
+                            <div class="stat-value" style="font-size: 20px; color: var(--success)" id="video-time">--</div>
+                            <div class="stat-label">Videos (<span id="video-count">0</span> files)</div>
+                        </div>
+                        <div class="stat-card" style="padding: 12px;">
+                            <div class="stat-value" style="font-size: 20px; color: var(--accent)" id="image-time">--</div>
+                            <div class="stat-label">Images (<span id="image-count">0</span> files)</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="card">
+                    <div class="card-header">
+                        <span class="card-title">Concurrent Cell Usage</span>
+                    </div>
+                    <div class="stat-card" style="padding: 24px;">
+                        <div class="stat-value accent" id="avg-concurrent">--</div>
+                        <div class="stat-label">Average Cells Playing</div>
+                    </div>
+                    <div class="table-container" style="max-height: 200px; overflow-y: auto;">
+                        <table id="cell-usage-table">
+                            <thead>
+                                <tr>
+                                    <th>Cell</th>
+                                    <th>Sessions</th>
+                                    <th>Time</th>
+                                </tr>
+                            </thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Skip Analysis -->
+        <div class="section">
+            <h2 class="section-title">Skip Analysis</h2>
+            <div class="grid grid-2">
+                <div class="card">
+                    <div class="card-header">
+                        <span class="card-title">Skip Position Heatmap</span>
+                    </div>
+                    <div class="chart-container">
+                        <canvas id="skipHeatmapChart"></canvas>
+                    </div>
+                </div>
+                <div class="card">
+                    <div class="card-header">
+                        <span class="card-title">Skip Types</span>
+                    </div>
+                    <div class="chart-container">
+                        <canvas id="skipTypesChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Session Distribution -->
+        <div class="section">
+            <h2 class="section-title">Session Analysis</h2>
+            <div class="grid grid-2">
+                <div class="card">
+                    <div class="card-header">
+                        <span class="card-title">Session Length Distribution</span>
+                    </div>
+                    <div class="chart-container">
+                        <canvas id="sessionDistChart"></canvas>
+                    </div>
+                </div>
+                <div class="card">
+                    <div class="card-header">
+                        <span class="card-title">Monthly Trend</span>
+                    </div>
+                    <div class="chart-container">
+                        <canvas id="monthlyTrendChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Weekly Trend -->
+        <div class="section">
+            <div class="card">
+                <div class="card-header">
+                    <span class="card-title">Weekly Watch Time Trend (Last 12 Weeks)</span>
+                </div>
+                <div class="chart-container">
+                    <canvas id="weeklyTrendChart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- Favorites Section -->
+        <div class="section">
+            <div class="card">
+                <div class="card-header">
+                    <span class="card-title">Favorites</span>
+                </div>
+                <div class="table-container">
+                    <table id="favorites-table">
+                        <thead>
+                            <tr>
+                                <th>File</th>
+                                <th>Watch Time</th>
+                                <th>Plays</th>
+                                <th>Type</th>
+                                <th>Added</th>
+                                <th>Path</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                    <div id="no-favorites" style="text-align: center; padding: 24px; color: var(--text-muted);">
+                        No favorites yet. Add favorites from the Top Files table.
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <!-- Tables Row -->
         <div class="section">
             <div class="grid grid-2">
@@ -457,8 +647,11 @@
                             <thead>
                                 <tr>
                                     <th>File</th>
-                                    <th>Watch Time</th>
+                                    <th>Time</th>
                                     <th>Plays</th>
+                                    <th>Skips</th>
+                                    <th>Loops</th>
+                                    <th>Avg %</th>
                                     <th>Type</th>
                                     <th>Path</th>
                                 </tr>
@@ -480,6 +673,7 @@
                                     <th>Directory</th>
                                     <th>Watch Time</th>
                                     <th>Files</th>
+                                    <th>Path</th>
                                 </tr>
                             </thead>
                             <tbody></tbody>
@@ -527,6 +721,7 @@
                                 <th>Grid</th>
                                 <th>Source</th>
                                 <th>Filter</th>
+                                <th>Path</th>
                             </tr>
                         </thead>
                         <tbody></tbody>
@@ -537,7 +732,7 @@
     </div>
 
     <script>
-        let hourlyChart, dailyChart, timelineChart;
+        let hourlyChart, dailyChart, timelineChart, fileTypeChart, skipHeatmapChart, skipTypesChart, sessionDistChart, weeklyTrendChart, monthlyTrendChart;
 
         const chartColors = {
             accent: '#00d4ff',
@@ -707,6 +902,296 @@
             });
         }
 
+        function openInFileManager(path) {
+            // Get directory from file path
+            const dir = path.includes('/') ? path.substring(0, path.lastIndexOf('/')) : path;
+            navigator.clipboard.writeText(dir).then(() => {
+                showToast(`Directory copied: ${dir}`);
+            });
+        }
+
+        function showToast(message) {
+            const toast = document.createElement('div');
+            toast.className = 'toast';
+            toast.textContent = message;
+            document.body.appendChild(toast);
+            setTimeout(() => toast.classList.add('show'), 10);
+            setTimeout(() => {
+                toast.classList.remove('show');
+                setTimeout(() => toast.remove(), 300);
+            }, 2000);
+        }
+
+        async function loadCompletionStats() {
+            const data = await fetchData('completion-stats');
+            document.getElementById('full-watch').textContent = data.full_watch_count;
+            document.getElementById('partial-watch').textContent = data.partial_watch_count;
+            document.getElementById('skipped-files').textContent = data.skipped_count;
+            document.getElementById('avg-completion').textContent = data.average_completion + '%';
+        }
+
+        async function loadFileTypeBreakdown() {
+            const data = await fetchData('file-type-breakdown');
+
+            document.getElementById('video-time').textContent = data.video_time;
+            document.getElementById('video-count').textContent = data.video_count;
+            document.getElementById('image-time').textContent = data.image_time;
+            document.getElementById('image-count').textContent = data.image_count;
+
+            if (fileTypeChart) fileTypeChart.destroy();
+
+            fileTypeChart = new Chart(document.getElementById('fileTypeChart'), {
+                type: 'doughnut',
+                data: {
+                    labels: ['Videos', 'Images'],
+                    datasets: [{
+                        data: [data.video_ms, data.image_ms],
+                        backgroundColor: [chartColors.success, chartColors.accent],
+                        borderWidth: 0
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                            labels: { color: chartColors.text }
+                        }
+                    }
+                }
+            });
+        }
+
+        async function loadConcurrentStats() {
+            const data = await fetchData('concurrent-stats');
+            document.getElementById('avg-concurrent').textContent = data.average_concurrent + 'x';
+
+            const tbody = document.querySelector('#cell-usage-table tbody');
+            tbody.innerHTML = data.cell_usage.map(c => `
+                <tr>
+                    <td>${c.cell}</td>
+                    <td>${c.sessions}</td>
+                    <td>${c.watch_time}</td>
+                </tr>
+            `).join('');
+        }
+
+        async function loadSkipHeatmap() {
+            const data = await fetchData('skip-heatmap');
+
+            if (skipHeatmapChart) skipHeatmapChart.destroy();
+
+            skipHeatmapChart = new Chart(document.getElementById('skipHeatmapChart'), {
+                type: 'bar',
+                data: {
+                    labels: data.labels,
+                    datasets: [{
+                        label: 'Skips at Position',
+                        data: data.values,
+                        backgroundColor: 'rgba(255, 170, 0, 0.5)',
+                        borderColor: '#ffaa00',
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false },
+                        title: {
+                            display: true,
+                            text: 'Where in videos do you skip most?',
+                            color: chartColors.text
+                        }
+                    },
+                    scales: {
+                        x: {
+                            grid: { color: chartColors.grid },
+                            ticks: { color: chartColors.text },
+                            title: { display: true, text: 'Video Position', color: chartColors.text }
+                        },
+                        y: {
+                            grid: { color: chartColors.grid },
+                            ticks: { color: chartColors.text },
+                            title: { display: true, text: 'Skip Count', color: chartColors.text }
+                        }
+                    }
+                }
+            });
+        }
+
+        async function loadSkipTypes() {
+            const data = await fetchData('skip-types');
+
+            if (skipTypesChart) skipTypesChart.destroy();
+
+            const labels = Object.keys(data);
+            const values = Object.values(data);
+            const colors = ['#ff4466', '#ffaa00', '#00d4ff', '#00ff88', '#9966ff', '#ff66aa'];
+
+            skipTypesChart = new Chart(document.getElementById('skipTypesChart'), {
+                type: 'pie',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        data: values,
+                        backgroundColor: colors.slice(0, labels.length),
+                        borderWidth: 0
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'right',
+                            labels: { color: chartColors.text }
+                        }
+                    }
+                }
+            });
+        }
+
+        async function loadSessionDistribution() {
+            const data = await fetchData('session-distribution');
+
+            if (sessionDistChart) sessionDistChart.destroy();
+
+            sessionDistChart = new Chart(document.getElementById('sessionDistChart'), {
+                type: 'bar',
+                data: {
+                    labels: data.labels,
+                    datasets: [{
+                        label: 'Sessions',
+                        data: data.values,
+                        backgroundColor: chartColors.accentDim,
+                        borderColor: chartColors.accent,
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false }
+                    },
+                    scales: {
+                        x: {
+                            grid: { color: chartColors.grid },
+                            ticks: { color: chartColors.text }
+                        },
+                        y: {
+                            grid: { color: chartColors.grid },
+                            ticks: { color: chartColors.text }
+                        }
+                    }
+                }
+            });
+        }
+
+        async function loadWeeklyTrend() {
+            const data = await fetchData('weekly-trend?weeks=12');
+
+            if (weeklyTrendChart) weeklyTrendChart.destroy();
+
+            weeklyTrendChart = new Chart(document.getElementById('weeklyTrendChart'), {
+                type: 'line',
+                data: {
+                    labels: data.map(d => d.week),
+                    datasets: [{
+                        label: 'Watch Time (min)',
+                        data: data.map(d => d.minutes),
+                        borderColor: chartColors.accent,
+                        backgroundColor: chartColors.accentDim,
+                        fill: true,
+                        tension: 0.3
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false }
+                    },
+                    scales: {
+                        x: {
+                            grid: { color: chartColors.grid },
+                            ticks: { color: chartColors.text }
+                        },
+                        y: {
+                            grid: { color: chartColors.grid },
+                            ticks: { color: chartColors.text }
+                        }
+                    }
+                }
+            });
+        }
+
+        async function loadMonthlyTrend() {
+            const data = await fetchData('monthly-trend?months=12');
+
+            if (monthlyTrendChart) monthlyTrendChart.destroy();
+
+            monthlyTrendChart = new Chart(document.getElementById('monthlyTrendChart'), {
+                type: 'bar',
+                data: {
+                    labels: data.map(d => d.month),
+                    datasets: [{
+                        label: 'Watch Time (min)',
+                        data: data.map(d => d.minutes),
+                        backgroundColor: chartColors.successDim,
+                        borderColor: chartColors.success,
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false }
+                    },
+                    scales: {
+                        x: {
+                            grid: { color: chartColors.grid },
+                            ticks: { color: chartColors.text }
+                        },
+                        y: {
+                            grid: { color: chartColors.grid },
+                            ticks: { color: chartColors.text }
+                        }
+                    }
+                }
+            });
+        }
+
+        async function loadFavorites() {
+            const data = await fetchData('favorites');
+            const tbody = document.querySelector('#favorites-table tbody');
+            const noFavs = document.getElementById('no-favorites');
+
+            if (data.length === 0) {
+                tbody.innerHTML = '';
+                noFavs.style.display = 'block';
+            } else {
+                noFavs.style.display = 'none';
+                tbody.innerHTML = data.map(f => `
+                    <tr>
+                        <td class="file-name" title="${f.path}">${f.file}</td>
+                        <td>${f.watch_time}</td>
+                        <td>${f.play_count}</td>
+                        <td><span class="badge ${f.is_image ? 'badge-image' : 'badge-video'}">${f.is_image ? 'IMG' : 'VID'}</span></td>
+                        <td>${f.added_at}</td>
+                        <td class="path-cell">
+                            <span class="path-text" title="${f.path}">${f.path}</span>
+                            <button class="copy-btn" onclick="copyToClipboard('${f.path.replace(/'/g, "\\'")}', this)">Copy</button>
+                            <button class="open-btn" onclick="openInFileManager('${f.path.replace(/'/g, "\\'")}')">Dir</button>
+                        </td>
+                    </tr>
+                `).join('');
+            }
+        }
+
         async function loadTopFiles() {
             const data = await fetchData('top-files?limit=15');
             const tbody = document.querySelector('#top-files-table tbody');
@@ -715,10 +1200,14 @@
                     <td class="file-name" title="${f.path}">${f.file}</td>
                     <td>${f.watch_time}</td>
                     <td>${f.play_count}</td>
+                    <td>${f.skip_count}</td>
+                    <td>${f.loop_count}</td>
+                    <td>${f.avg_watch_pct}%</td>
                     <td><span class="badge ${f.is_image ? 'badge-image' : 'badge-video'}">${f.is_image ? 'IMG' : 'VID'}</span></td>
                     <td class="path-cell">
                         <span class="path-text" title="${f.path}">${f.path}</span>
                         <button class="copy-btn" onclick="copyToClipboard('${f.path.replace(/'/g, "\\'")}', this)">Copy</button>
+                        <button class="open-btn" onclick="openInFileManager('${f.path.replace(/'/g, "\\'")}')">Dir</button>
                     </td>
                 </tr>
             `).join('');
@@ -732,6 +1221,9 @@
                     <td class="file-name" title="${d.directory}">${d.short_name}</td>
                     <td>${d.watch_time}</td>
                     <td>${d.file_count}</td>
+                    <td class="path-cell">
+                        <button class="copy-btn" onclick="copyToClipboard('${d.directory.replace(/'/g, "\\'")}', this)">Copy</button>
+                    </td>
                 </tr>
             `).join('');
         }
@@ -748,6 +1240,7 @@
                     <td class="path-cell">
                         <span class="path-text" title="${s.path}">${s.path}</span>
                         <button class="copy-btn" onclick="copyToClipboard('${s.path.replace(/'/g, "\\'")}', this)">Copy</button>
+                        <button class="open-btn" onclick="openInFileManager('${s.path.replace(/'/g, "\\'")}')">Dir</button>
                     </td>
                 </tr>
             `).join('');
@@ -763,6 +1256,9 @@
                     <td>${s.grid}</td>
                     <td class="file-name">${s.source}</td>
                     <td>${s.filter}</td>
+                    <td class="path-cell">
+                        ${s.source !== '-' ? `<button class="copy-btn" onclick="copyToClipboard('${s.source.replace(/'/g, "\\'")}', this)">Copy</button>` : ''}
+                    </td>
                 </tr>
             `).join('');
         }
@@ -773,6 +1269,15 @@
                 loadHourlyChart(),
                 loadDailyChart(),
                 loadTimelineChart(),
+                loadCompletionStats(),
+                loadFileTypeBreakdown(),
+                loadConcurrentStats(),
+                loadSkipHeatmap(),
+                loadSkipTypes(),
+                loadSessionDistribution(),
+                loadWeeklyTrend(),
+                loadMonthlyTrend(),
+                loadFavorites(),
                 loadTopFiles(),
                 loadDirectories(),
                 loadRecentSessions(),

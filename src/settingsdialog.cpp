@@ -331,8 +331,8 @@ QWidget* SettingsDialog::createStatsTab()
     auto *topFilesLayout = new QVBoxLayout(topFilesGroup);
 
     m_topFilesTable = new QTableWidget;
-    m_topFilesTable->setColumnCount(5);
-    m_topFilesTable->setHorizontalHeaderLabels({"File", "Watch Time", "Plays", "Last Watched", "Path"});
+    m_topFilesTable->setColumnCount(8);
+    m_topFilesTable->setHorizontalHeaderLabels({"File", "Watch Time", "Plays", "Skips", "Loops", "Avg %", "Last Watched", "Path"});
     m_topFilesTable->horizontalHeader()->setStretchLastSection(true);
     m_topFilesTable->setMaximumHeight(250);
     m_topFilesTable->verticalHeader()->setVisible(false);
@@ -340,8 +340,8 @@ QWidget* SettingsDialog::createStatsTab()
     m_topFilesTable->setContextMenuPolicy(Qt::CustomContextMenu);
     connect(m_topFilesTable, &QTableWidget::customContextMenuRequested, this, [this](const QPoint &pos) {
         int row = m_topFilesTable->rowAt(pos.y());
-        if (row >= 0 && m_topFilesTable->item(row, 4)) {
-            QString path = m_topFilesTable->item(row, 4)->text();
+        if (row >= 0 && m_topFilesTable->item(row, 7)) {
+            QString path = m_topFilesTable->item(row, 7)->text();
             QMenu menu;
             QAction *copyAction = menu.addAction("Copy Path");
             if (menu.exec(m_topFilesTable->viewport()->mapToGlobal(pos)) == copyAction) {
@@ -546,12 +546,15 @@ void SettingsDialog::updateStatsDisplay()
         m_topFilesTable->item(i, 0)->setToolTip(file.filePath);
         m_topFilesTable->setItem(i, 1, new QTableWidgetItem(formatDuration(file.totalWatchMs)));
         m_topFilesTable->setItem(i, 2, new QTableWidgetItem(QString::number(file.playCount)));
+        m_topFilesTable->setItem(i, 3, new QTableWidgetItem(QString::number(file.skipCount)));
+        m_topFilesTable->setItem(i, 4, new QTableWidgetItem(QString::number(file.loopCount)));
+        m_topFilesTable->setItem(i, 5, new QTableWidgetItem(QString("%1%").arg(file.avgWatchPercent, 0, 'f', 0)));
 
         QString lastWatched = file.lastWatchedAt > 0
             ? QDateTime::fromMSecsSinceEpoch(file.lastWatchedAt).toString("yyyy-MM-dd HH:mm")
             : "--";
-        m_topFilesTable->setItem(i, 3, new QTableWidgetItem(lastWatched));
-        m_topFilesTable->setItem(i, 4, new QTableWidgetItem(file.filePath));
+        m_topFilesTable->setItem(i, 6, new QTableWidgetItem(lastWatched));
+        m_topFilesTable->setItem(i, 7, new QTableWidgetItem(file.filePath));
     }
     m_topFilesTable->resizeColumnsToContents();
 

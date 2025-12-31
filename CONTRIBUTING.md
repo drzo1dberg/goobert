@@ -403,9 +403,179 @@ Wrap at 72 characters.
 - Use present tense ("Add feature" not "Added feature")
 ```
 
+## Statistics System
+
+### Overview
+
+Goobert includes an SQLite-based statistics tracking system with a web dashboard.
+
+**Database Location:** `~/.config/goobert/goobert.db`
+
+### Database Schema
+
+| Table | Purpose |
+|-------|---------|
+| `file_stats` | Per-file watch time, play count, last position, duration |
+| `watch_sessions` | Individual playback sessions with timestamps |
+| `skip_events` | Skip/seek events with from/to positions |
+| `loop_events` | Loop toggle events |
+| `favorites` | User-marked favorite files |
+| `position_samples` | Position sampling for heatmaps |
+| `pause_events` | Pause/resume events |
+| `volume_events` | Volume change history |
+| `zoom_events` | Zoom/pan events |
+| `screenshot_events` | Screenshot captures |
+| `fullscreen_events` | Fullscreen enter/exit |
+| `grid_events` | Grid start/stop sessions |
+| `rotation_events` | Video rotation events |
+
+### Adding New Statistics
+
+1. **Add table** in `StatsManager::createTables()`:
+```cpp
+ok = query.exec(R"(
+    CREATE TABLE IF NOT EXISTS my_new_events (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        file_id INTEGER,
+        timestamp INTEGER NOT NULL,
+        my_data TEXT,
+        FOREIGN KEY (file_id) REFERENCES file_stats(id)
+    )
+)");
+```
+
+2. **Add index** for performance:
+```cpp
+query.exec("CREATE INDEX IF NOT EXISTS idx_my_events_file ON my_new_events(file_id)");
+```
+
+3. **Add logging method** in `StatsManager`:
+```cpp
+void StatsManager::logMyEvent(const QString &filePath, const QString &data)
+{
+    if (!m_initialized || filePath.isEmpty()) return;
+
+    qint64 fileId = getOrCreateFileId(filePath, 0, false);
+    if (fileId < 0) return;
+
+    QSqlQuery query(m_db);
+    query.prepare("INSERT INTO my_new_events (file_id, timestamp, my_data) VALUES (?, ?, ?)");
+    query.addBindValue(fileId);
+    query.addBindValue(QDateTime::currentMSecsSinceEpoch());
+    query.addBindValue(data);
+    query.exec();
+}
+```
+
+4. **Add query method**:
+```cpp
+QList<MyEvent> StatsManager::getMyEvents(int limit) const
+{
+    // Implementation...
+}
+```
+
+5. **Declare in header** (`statsmanager.h`):
+```cpp
+void logMyEvent(const QString &filePath, const QString &data);
+[[nodiscard]] QList<MyEvent> getMyEvents(int limit = 100) const;
+```
+
+### Web Dashboard
+
+The dashboard is a Flask application in the `dashboard/` directory.
+
+#### Running
+
+```bash
+cd dashboard
+pip install flask flask-cors
+python3 app.py
+# Open http://localhost:5000
+```
+
+#### Adding API Endpoints
+
+1. **Add route** in `dashboard/app.py`:
+```python
+@app.route('/api/my-stats')
+def api_my_stats():
+    """Get my custom statistics"""
+    conn = get_db()
+    cur = conn.cursor()
+
+    cur.execute("""
+        SELECT my_data, COUNT(*) as cnt
+        FROM my_new_events
+        GROUP BY my_data
+    """)
+
+    result = {}
+    for row in cur.fetchall():
+        result[row['my_data']] = row['cnt']
+
+    conn.close()
+    return jsonify(result)
+```
+
+2. **Add UI component** in `dashboard/templates/index.html`:
+```html
+<div class="card">
+    <div class="card-header">
+        <span class="card-title">My Stats</span>
+    </div>
+    <div class="chart-container">
+        <canvas id="myStatsChart"></canvas>
+    </div>
+</div>
+```
+
+3. **Add JavaScript loader**:
+```javascript
+async function loadMyStats() {
+    const data = await fetchData('my-stats');
+    // Create Chart.js visualization
+}
+```
+
+4. **Call in refreshAll()**:
+```javascript
+async function refreshAll() {
+    await Promise.all([
+        // ... existing loaders
+        loadMyStats()
+    ]);
+}
+```
+
+#### Chart.js Colors
+
+Use the predefined color palette:
+```javascript
+const chartColors = {
+    accent: '#00d4ff',
+    accentDim: 'rgba(0, 212, 255, 0.3)',
+    success: '#00ff88',
+    successDim: 'rgba(0, 255, 136, 0.3)',
+    grid: 'rgba(255, 255, 255, 0.05)',
+    text: '#a0a0b0'
+};
+```
+
+### Settings Dialog
+
+The `SettingsDialog` has 4 tabs. To add a setting:
+
+1. **Add UI control** in the appropriate tab method
+2. **Connect to Config** getter/setter
+3. **Apply changes** in the apply/save handlers
+
 ## Resources
 
 - [Qt6 Documentation](https://doc.qt.io/qt-6/)
+- [Qt6 SQL](https://doc.qt.io/qt-6/qtsql-index.html)
 - [libmpv API](https://mpv.io/manual/master/#embedding-into-other-programs-libmpv)
 - [mpv Properties Reference](https://mpv.io/manual/master/#properties)
 - [mpv Commands Reference](https://mpv.io/manual/master/#list-of-input-commands)
+- [Flask Documentation](https://flask.palletsprojects.com/)
+- [Chart.js Documentation](https://www.chartjs.org/docs/)
