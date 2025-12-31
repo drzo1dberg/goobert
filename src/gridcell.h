@@ -1,6 +1,7 @@
 #pragma once
 
 #include <QFrame>
+#include <QLabel>
 #include "mpvwidget.h"
 
 // Constants
@@ -29,6 +30,7 @@ public:
     void next();
     void prev();
     void shuffle();
+    void playIndex(int index);
     void setVolume(int volume);
     void toggleMute();
     void mute();
@@ -51,6 +53,8 @@ public:
     void rotateVideo();
     void zoomIn();
     void zoomOut();
+    void zoomAt(double delta, double normalizedX, double normalizedY);
+    void resetZoom();
 
     // Seek
     void seekRelative(double seconds);
@@ -66,6 +70,7 @@ public:
     void updatePlaylistPath(const QString &oldPath, const QString &newPath);
 
     [[nodiscard]] QString currentFile() const;
+    [[nodiscard]] QStringList currentPlaylist() const;
     [[nodiscard]] double position() const noexcept;
     [[nodiscard]] double duration() const noexcept;
     [[nodiscard]] bool isPaused() const noexcept;
@@ -80,15 +85,19 @@ protected:
     void mousePressEvent(QMouseEvent *event) override;
     void mouseDoubleClickEvent(QMouseEvent *event) override;
     void wheelEvent(QWheelEvent *event) override;
+    void resizeEvent(QResizeEvent *event) override;
 
 private slots:
     void onFileChanged(const QString &path);
     void onPositionChanged(double pos);
 
 private:
+    void updateLoopIndicator();
+
     int m_row;
     int m_col;
     MpvWidget *m_mpv = nullptr;
+    QLabel *m_loopIndicator = nullptr;
     QString m_currentFile;
     double m_position = 0.0;
     double m_duration = 0.0;

@@ -1,10 +1,9 @@
 #include "configpanel.h"
 #include "config.h"
+#include "theme.h"
 #include <QVBoxLayout>
 #include <QHBoxLayout>
-#include <QFormLayout>
 #include <QFileDialog>
-#include <utility>
 
 ConfigPanel::ConfigPanel(const QString &sourceDir, QWidget *parent)
     : QWidget(parent)
@@ -18,100 +17,92 @@ ConfigPanel::ConfigPanel(const QString &sourceDir, QWidget *parent)
 
 void ConfigPanel::setupUi()
 {
-    setStyleSheet(R"(
-        QWidget { background-color: #1a1a1a; color: #ccc; }
-        QPushButton { background-color: #2a2a2a; border: none; padding: 4px 8px; }
-        QPushButton:hover { background-color: #3a3a3a; }
-        QLineEdit, QSpinBox {
-            background-color: #2a2a2a;
-            border: 1px solid #333;
-            padding: 4px;
-            color: #ccc;
-        }
-        QLabel { color: #888; }
-    )");
+    setStyleSheet(Theme::inputStyle() + QString(
+        "QWidget { background: %1; }"
+        "QLabel { color: %2; font-size: 11px; }"
+    ).arg(Theme::Colors::Surface, Theme::Colors::TextMuted));
 
-    auto *mainLayout = new QVBoxLayout(this);
-    mainLayout->setContentsMargins(8, 4, 8, 4);
-    mainLayout->setSpacing(4);
-
-    // Header with collapse button
-    auto *headerLayout = new QHBoxLayout();
-    auto *headerLabel = new QLabel("Configuration");
-    headerLabel->setStyleSheet("font-weight: bold; color: #aaa;");
-    headerLayout->addWidget(headerLabel);
-    headerLayout->addStretch();
-
-    m_collapseBtn = new QPushButton("-");
-    m_collapseBtn->setFixedSize(20, 20);
-    m_collapseBtn->setToolTip("Collapse/Expand");
-    connect(m_collapseBtn, &QPushButton::clicked, this, &ConfigPanel::toggleCollapse);
-    headerLayout->addWidget(m_collapseBtn);
-
-    mainLayout->addLayout(headerLayout);
-
-    // Content widget (collapsible)
-    m_contentWidget = new QWidget();
-    auto *contentLayout = new QHBoxLayout(m_contentWidget);
-    contentLayout->setContentsMargins(0, 4, 0, 0);
-    contentLayout->setSpacing(12);
+    auto *mainLayout = new QHBoxLayout(this);
+    mainLayout->setContentsMargins(12, 8, 12, 8);
+    mainLayout->setSpacing(16);
 
     Config &cfg = Config::instance();
 
-    // Grid size
-    auto *gridLayout = new QHBoxLayout();
-    gridLayout->addWidget(new QLabel("Grid:"));
+    // Grid
+    auto *gridLabel = new QLabel("Grid");
+    mainLayout->addWidget(gridLabel);
+
     m_colsSpin = new QSpinBox();
     m_colsSpin->setRange(1, 10);
     m_colsSpin->setValue(cfg.defaultCols());
     m_colsSpin->setFixedWidth(50);
-    gridLayout->addWidget(m_colsSpin);
-    gridLayout->addWidget(new QLabel("x"));
+    mainLayout->addWidget(m_colsSpin);
+
+    auto *xLabel = new QLabel("x");
+    mainLayout->addWidget(xLabel);
+
     m_rowsSpin = new QSpinBox();
     m_rowsSpin->setRange(1, 10);
     m_rowsSpin->setValue(cfg.defaultRows());
     m_rowsSpin->setFixedWidth(50);
-    gridLayout->addWidget(m_rowsSpin);
-    contentLayout->addLayout(gridLayout);
+    mainLayout->addWidget(m_rowsSpin);
+
+    mainLayout->addSpacing(16);
 
     // Source
-    auto *sourceLayout = new QHBoxLayout();
-    sourceLayout->addWidget(new QLabel("Source:"));
+    auto *srcLabel = new QLabel("Source");
+    mainLayout->addWidget(srcLabel);
+
     m_sourceEdit = new QLineEdit();
-    m_sourceEdit->setMinimumWidth(200);
-    sourceLayout->addWidget(m_sourceEdit);
+    m_sourceEdit->setMinimumWidth(250);
+    mainLayout->addWidget(m_sourceEdit, 1);
 
     auto *browseBtn = new QPushButton("...");
     browseBtn->setFixedWidth(30);
+    browseBtn->setStyleSheet(QString(
+        "QPushButton { background: %1; border: 1px solid %2; border-radius: 3px; color: %3; }"
+        "QPushButton:hover { background: %4; }"
+    ).arg(Theme::Colors::SurfaceLight, Theme::Colors::GlassBorder,
+          Theme::Colors::TextPrimary, Theme::Colors::SurfaceHover));
     connect(browseBtn, &QPushButton::clicked, this, [this]() {
         QString dir = QFileDialog::getExistingDirectory(this, "Select Media Directory", m_sourceEdit->text());
         if (!dir.isEmpty()) {
             m_sourceEdit->setText(dir);
         }
     });
-    sourceLayout->addWidget(browseBtn);
-    contentLayout->addLayout(sourceLayout);
+    mainLayout->addWidget(browseBtn);
+
+    mainLayout->addSpacing(16);
 
     // Filter
-    auto *filterLayout = new QHBoxLayout();
-    filterLayout->addWidget(new QLabel("Filter:"));
+    auto *filterLabel = new QLabel("Filter");
+    mainLayout->addWidget(filterLabel);
+
     m_filterEdit = new QLineEdit();
-    m_filterEdit->setPlaceholderText("space-separated AND filter");
-    m_filterEdit->setMinimumWidth(150);
-    filterLayout->addWidget(m_filterEdit);
-    contentLayout->addLayout(filterLayout);
+    m_filterEdit->setPlaceholderText("terms (AND)");
+    m_filterEdit->setFixedWidth(150);
+    mainLayout->addWidget(m_filterEdit);
 
-    contentLayout->addStretch();
+    // Collapse button
+    m_collapseBtn = new QPushButton("-");
+    m_collapseBtn->setFixedSize(20, 20);
+    m_collapseBtn->setStyleSheet(QString(
+        "QPushButton { background: transparent; border: none; color: %1; font-weight: bold; }"
+        "QPushButton:hover { color: %2; }"
+    ).arg(Theme::Colors::TextMuted, Theme::Colors::TextPrimary));
+    connect(m_collapseBtn, &QPushButton::clicked, this, &ConfigPanel::toggleCollapse);
+    mainLayout->addWidget(m_collapseBtn);
 
-    mainLayout->addWidget(m_contentWidget);
-
-    // Connect grid size changes
+    // Connections
     connect(m_colsSpin, QOverload<int>::of(&QSpinBox::valueChanged), this, [this](int cols) {
         emit gridSizeChanged(m_rowsSpin->value(), cols);
     });
     connect(m_rowsSpin, QOverload<int>::of(&QSpinBox::valueChanged), this, [this](int rows) {
         emit gridSizeChanged(rows, m_colsSpin->value());
     });
+
+    // Content widget for collapse (wrap the whole content)
+    m_contentWidget = this; // Simplified - just hide the whole panel
 }
 
 QString ConfigPanel::sourceDir() const
@@ -145,8 +136,7 @@ void ConfigPanel::setEnabled(bool enabled)
 void ConfigPanel::setCollapsed(bool collapsed)
 {
     m_collapsed = collapsed;
-    m_contentWidget->setVisible(!collapsed);
-    m_collapseBtn->setText(collapsed ? "+" : "-");
+    setVisible(!collapsed);
 }
 
 void ConfigPanel::toggleCollapse()

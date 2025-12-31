@@ -12,7 +12,6 @@
 #include "gridcell.h"
 #include "toolbar.h"
 #include "sidepanel.h"
-#include "configpanel.h"
 
 // Constants
 namespace MainWindowConstants {
@@ -54,6 +53,7 @@ private slots:
     void stopGrid();
     void toggleFullscreen();
     void exitFullscreen();
+    void panicReset();
 
     void playPauseAll();
     void nextAll();
@@ -68,6 +68,7 @@ private slots:
 
     // Selected cell actions
     void toggleLoopSelected();
+    void togglePauseSelected();
     void frameStepSelected();
     void frameBackStepSelected();
     void rotateSelected();
@@ -75,6 +76,7 @@ private slots:
     void zoomOutSelected();
     void seekSelected(double seconds);
     void screenshotSelected();
+    void showPlaylistPicker();
 
     void onCellSelected(int row, int col);
     void onCellDoubleClicked(int row, int col);
@@ -104,14 +106,16 @@ private:
     // New UI components
     ToolBar *m_toolBar = nullptr;
     SidePanel *m_sidePanel = nullptr;
-    ConfigPanel *m_configPanel = nullptr;
     QLabel *m_statusLabel = nullptr;
+    QLabel *m_runningIndicator = nullptr;
+    QLabel *m_cellCountLabel = nullptr;
 
     QVector<GridCell*> m_cells;
     QMap<QPair<int,int>, GridCell*> m_cellMap;
 
     bool m_isFullscreen = false;
     bool m_isTileFullscreen = false;
+    bool m_isMuted = false;
     GridCell *m_fullscreenCell = nullptr;
     GridCell *m_selectedCell = nullptr;
     int m_selectedRow = -1;

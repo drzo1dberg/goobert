@@ -12,7 +12,6 @@
 #include <QMouseEvent>
 #include <stdexcept>
 #include <clocale>
-#include <locale>
 
 static void wakeup(void *ctx)
 {
@@ -408,6 +407,11 @@ void MpvWidget::shuffle()
     command(QVariantList{"playlist-shuffle"});
 }
 
+void MpvWidget::playIndex(int index)
+{
+    command(QVariantList{"playlist-play-index", index});
+}
+
 void MpvWidget::seek(double seconds)
 {
     command(QVariantList{"seek", seconds, "relative"});
@@ -436,6 +440,31 @@ void MpvWidget::unmute()
 QString MpvWidget::currentFile() const
 {
     return getProperty("path").toString();
+}
+
+QStringList MpvWidget::currentPlaylist() const
+{
+    QStringList result;
+    if (!m_mpv) return result;
+
+    // Get playlist count from mpv
+    int64_t count = 0;
+    if (mpv_get_property(m_mpv, "playlist-count", MPV_FORMAT_INT64, &count) < 0) {
+        return m_currentPlaylist;  // Fallback to stored playlist
+    }
+
+    // Get each playlist entry's filename
+    for (int64_t i = 0; i < count; ++i) {
+        QString propName = QString("playlist/%1/filename").arg(i);
+        QByteArray propNameUtf8 = propName.toUtf8();
+        char *filename = nullptr;
+        if (mpv_get_property(m_mpv, propNameUtf8.constData(), MPV_FORMAT_STRING, &filename) >= 0 && filename) {
+            result.append(QString::fromUtf8(filename));
+            mpv_free(filename);
+        }
+    }
+
+    return result.isEmpty() ? m_currentPlaylist : result;
 }
 
 double MpvWidget::position() const
@@ -523,6 +552,46 @@ void MpvWidget::zoomOut()
     setProperty("video-zoom", zoom - MpvConstants::kZoomStep);
 }
 
+void MpvWidget::zoomAt(double delta, double normalizedX, double normalizedY)
+{
+    // Zoom towards mouse position
+    // normalizedX/Y: 0.0 = left/top, 1.0 = right/bottom, 0.5 = center
+    double currentZoom = getProperty("video-zoom").toDouble();
+    double currentPanX = getProperty("video-pan-x").toDouble();
+    double currentPanY = getProperty("video-pan-y").toDouble();
+
+    // Convert normalized coords to centered coords (-0.5 to 0.5)
+    double cx = normalizedX - 0.5;
+    double cy = normalizedY - 0.5;
+
+    // Calculate zoom factor (video-zoom is log2 scale)
+    double newZoom = currentZoom + delta;
+
+    // Limit zoom range
+    if (newZoom < -1.0 || newZoom > 3.0) return;
+
+    double oldScale = std::pow(2.0, currentZoom);
+    double newScale = std::pow(2.0, newZoom);
+
+    // Pan adjustment: to keep the point under cursor fixed,
+    // we need to compensate for the scale change.
+    // Pan moves opposite to cursor offset to bring that region into view.
+    double scaleRatio = newScale / oldScale;
+    double newPanX = currentPanX * scaleRatio - cx * (scaleRatio - 1.0);
+    double newPanY = currentPanY * scaleRatio - cy * (scaleRatio - 1.0);
+
+    setProperty("video-zoom", newZoom);
+    setProperty("video-pan-x", newPanX);
+    setProperty("video-pan-y", newPanY);
+}
+
+void MpvWidget::resetZoom()
+{
+    setProperty("video-zoom", 0.0);
+    setProperty("video-pan-x", 0.0);
+    setProperty("video-pan-y", 0.0);
+}
+
 // OSC/OSD control for fullscreen mode
 void MpvWidget::setOscEnabled(bool enabled)
 {
@@ -547,6 +616,7 @@ void MpvWidget::setOsdLevel(int level)
     if (!m_mpv) return;
     setProperty("osd-level", level);
 }
+
 
 // Screenshot
 void MpvWidget::screenshot()

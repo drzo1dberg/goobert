@@ -30,12 +30,12 @@ set(SOURCES
     src/main.cpp
     src/mainwindow.cpp
     src/mpvwidget.cpp
-    src/mpvcontroller.cpp
     src/gridcell.cpp
     src/toolbar.cpp
     src/sidepanel.cpp
     src/monitorwidget.cpp
     src/playlistwidget.cpp
+    src/playlistpicker.cpp
     src/configpanel.cpp
     src/filescanner.cpp
     src/config.cpp
@@ -45,12 +45,12 @@ set(SOURCES
 set(HEADERS
     src/mainwindow.h
     src/mpvwidget.h
-    src/mpvcontroller.h
     src/gridcell.h
     src/toolbar.h
     src/sidepanel.h
     src/monitorwidget.h
     src/playlistwidget.h
+    src/playlistpicker.h
     src/configpanel.h
     src/filescanner.h
     src/config.h

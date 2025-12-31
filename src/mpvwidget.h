@@ -39,6 +39,7 @@ public:
     void next();
     void prev();
     void shuffle();
+    void playIndex(int index);
     void seek(double seconds);
     void setVolume(int volume);
     void toggleMute();
@@ -46,6 +47,7 @@ public:
     void unmute();
 
     [[nodiscard]] QString currentFile() const;
+    [[nodiscard]] QStringList currentPlaylist() const;
     [[nodiscard]] double position() const;
     [[nodiscard]] double duration() const;
     [[nodiscard]] bool isPaused() const;
@@ -70,6 +72,8 @@ public:
     void rotateVideo();
     void zoomIn();
     void zoomOut();
+    void zoomAt(double delta, double normalizedX, double normalizedY);
+    void resetZoom();
 
     // Screenshot
     void screenshot();
