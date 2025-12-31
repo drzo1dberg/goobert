@@ -4,6 +4,8 @@
 #include "keymap.h"
 #include "playlistpicker.h"
 #include "theme.h"
+#include "statsmanager.h"
+#include "settingsdialog.h"
 #include <QKeyEvent>
 #include <QWheelEvent>
 #include <QMouseEvent>
@@ -28,6 +30,14 @@ MainWindow::MainWindow(QString sourceDir, QWidget *parent)
     Config &cfg = Config::instance();
     m_currentVolume = cfg.defaultVolume();
 
+    // Initialize statistics database if enabled
+    if (cfg.statsEnabled()) {
+        StatsManager::instance().initialize();
+    }
+
+    // Load key bindings from database
+    KeyMap::instance().loadFromDatabase();
+
     setWindowTitle(QString("Goobert %1").arg(GOOBERT_VERSION));
     resize(kDefaultWidth, kDefaultHeight);
 
@@ -37,6 +47,7 @@ MainWindow::MainWindow(QString sourceDir, QWidget *parent)
 MainWindow::~MainWindow()
 {
     stopGrid();
+    StatsManager::instance().shutdown();
 }
 
 void MainWindow::setupUi()
@@ -132,6 +143,7 @@ void MainWindow::setupUi()
             m_toolBar->setSourceDir(dir);
         }
     });
+    connect(m_toolBar, &ToolBar::settingsClicked, this, &MainWindow::showSettings);
 
     // Connect side panel signals
     connect(m_sidePanel, &SidePanel::cellSelected, this, &MainWindow::onCellSelected);
@@ -201,6 +213,12 @@ void MainWindow::startGrid()
     m_cellCountLabel->setText(QString("%1 cells • %2 files").arg(m_rows * m_cols).arg(files.size()));
     log(QString("Started %1x%2 grid").arg(m_cols).arg(m_rows));
 
+    // Log grid start event
+    Config &cfg = Config::instance();
+    if (cfg.statsEnabled()) {
+        StatsManager::instance().logGridEvent(m_rows, m_cols, m_sourceDir, filter, true);
+    }
+
     // Auto-select first cell
     if (!m_cells.isEmpty()) {
         onCellSelected(0, 0);
@@ -211,7 +229,7 @@ void MainWindow::startGrid()
         m_watchdogTimer = new QTimer(this);
         connect(m_watchdogTimer, &QTimer::timeout, this, &MainWindow::watchdogCheck);
     }
-    m_watchdogTimer->start(MainWindowConstants::kWatchdogIntervalMs);
+    m_watchdogTimer->start(cfg.watchdogIntervalMs());
 }
 
 void MainWindow::stopGrid()
@@ -219,6 +237,13 @@ void MainWindow::stopGrid()
     // Stop watchdog
     if (m_watchdogTimer) {
         m_watchdogTimer->stop();
+    }
+
+    // Stop all stats tracking
+    Config &cfg = Config::instance();
+    if (cfg.statsEnabled()) {
+        StatsManager::instance().stopAll();
+        StatsManager::instance().logGridEvent(m_rows, m_cols, m_sourceDir, m_currentFilter, false);
     }
 
     for (GridCell *cell : m_cells) {
@@ -373,16 +398,16 @@ void MainWindow::keyPressEvent(QKeyEvent *event)
         toggleTileFullscreen();
         break;
     case KeyMap::Action::SeekForward:
-        seekSelected(MainWindowConstants::kSeekStepSeconds);
+        seekSelected(Config::instance().seekStepSeconds());
         break;
     case KeyMap::Action::SeekBackward:
-        seekSelected(-MainWindowConstants::kSeekStepSeconds);
+        seekSelected(-Config::instance().seekStepSeconds());
         break;
     case KeyMap::Action::SeekForwardLong:
-        seekSelected(MainWindowConstants::kSeekStepLongSeconds);
+        seekSelected(Config::instance().seekStepLongSeconds());
         break;
     case KeyMap::Action::SeekBackwardLong:
-        seekSelected(-MainWindowConstants::kSeekStepLongSeconds);
+        seekSelected(-Config::instance().seekStepLongSeconds());
         break;
     case KeyMap::Action::FrameStepForward:
         frameStepSelected();  // N key: one frame forward
@@ -436,6 +461,11 @@ void MainWindow::toggleFullscreen()
         statusBar()->hide();
         showFullScreen();
         log("Fullscreen ON");
+
+        // Log fullscreen event
+        if (Config::instance().statsEnabled()) {
+            StatsManager::instance().logFullscreenEvent(true, false);
+        }
     }
 }
 
@@ -451,6 +481,11 @@ void MainWindow::exitFullscreen()
         m_sidePanel->show();
         statusBar()->show();
         log("Fullscreen OFF");
+
+        // Log fullscreen exit event
+        if (Config::instance().statsEnabled()) {
+            StatsManager::instance().logFullscreenEvent(false, false);
+        }
     }
 }
 
@@ -495,6 +530,11 @@ void MainWindow::enterTileFullscreen(int row, int col)
     }
 
     log(QString("Tile fullscreen: [%1,%2]").arg(row).arg(col));
+
+    // Log tile fullscreen event
+    if (Config::instance().statsEnabled()) {
+        StatsManager::instance().logFullscreenEvent(true, true, row, col);
+    }
 }
 
 void MainWindow::exitTileFullscreen()
@@ -527,6 +567,11 @@ void MainWindow::exitTileFullscreen()
     m_isTileFullscreen = false;
     m_fullscreenCell = nullptr;
     log("Tile fullscreen OFF");
+
+    // Log tile fullscreen exit event
+    if (Config::instance().statsEnabled()) {
+        StatsManager::instance().logFullscreenEvent(false, true);
+    }
 }
 
 void MainWindow::onCellSelected(int row, int col)
@@ -598,6 +643,11 @@ void MainWindow::muteAll()
         }
     }
     m_toolBar->setMuteActive(m_isMuted);
+
+    // Log mute event
+    if (Config::instance().statsEnabled()) {
+        StatsManager::instance().logVolumeChange(m_currentVolume, m_isMuted ? 0 : m_currentVolume, m_isMuted);
+    }
 }
 
 void MainWindow::setVolumeAll(int volume)
@@ -610,18 +660,32 @@ void MainWindow::setVolumeAll(int volume)
 
 void MainWindow::volumeUpAll()
 {
-    using namespace MainWindowConstants;
-    m_currentVolume = qMin(100, m_currentVolume + kVolumeStep);
+    int oldVolume = m_currentVolume;
+    int step = Config::instance().volumeStep();
+    m_currentVolume = qMin(100, m_currentVolume + step);
     setVolumeAll(m_currentVolume);
+    m_toolBar->setVolume(m_currentVolume);  // Update UI
     log(QString("Volume: %1%").arg(m_currentVolume));
+
+    // Log volume change
+    if (Config::instance().statsEnabled()) {
+        StatsManager::instance().logVolumeChange(oldVolume, m_currentVolume);
+    }
 }
 
 void MainWindow::volumeDownAll()
 {
-    using namespace MainWindowConstants;
-    m_currentVolume = qMax(0, m_currentVolume - kVolumeStep);
+    int oldVolume = m_currentVolume;
+    int step = Config::instance().volumeStep();
+    m_currentVolume = qMax(0, m_currentVolume - step);
     setVolumeAll(m_currentVolume);
+    m_toolBar->setVolume(m_currentVolume);  // Update UI
     log(QString("Volume: %1%").arg(m_currentVolume));
+
+    // Log volume change
+    if (Config::instance().statsEnabled()) {
+        StatsManager::instance().logVolumeChange(oldVolume, m_currentVolume);
+    }
 }
 
 void MainWindow::toggleTileFullscreen()
@@ -776,6 +840,11 @@ void MainWindow::onFileRenamed(const QString &oldPath, const QString &newPath)
     for (GridCell *cell : m_cells) {
         cell->updatePlaylistPath(oldPath, newPath);
     }
+
+    // Log rename event
+    if (Config::instance().statsEnabled()) {
+        StatsManager::instance().logRename(oldPath, newPath);
+    }
 }
 
 void MainWindow::onCustomSource(int row, int col, const QStringList &paths)
@@ -869,4 +938,14 @@ void MainWindow::log(const QString &message)
 {
     QString timestamp = QDateTime::currentDateTime().toString("hh:mm:ss");
     m_statusLabel->setText(QString("[%1] %2").arg(timestamp, message));
+}
+
+void MainWindow::showSettings()
+{
+    SettingsDialog dialog(this);
+    if (dialog.exec() == QDialog::Accepted) {
+        // Refresh tooltip with updated key bindings
+        m_toolBar->setToolTip(KeyMap::instance().generateTooltip());
+        log("Settings saved");
+    }
 }

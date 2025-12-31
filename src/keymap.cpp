@@ -1,4 +1,8 @@
 #include "keymap.h"
+#include "statsmanager.h"
+#include <QSqlQuery>
+#include <QSqlError>
+#include <QDebug>
 
 KeyMap& KeyMap::instance()
 {
@@ -9,6 +13,7 @@ KeyMap& KeyMap::instance()
 KeyMap::KeyMap()
 {
     setupDefaultBindings();
+    loadFromDatabase();
 }
 
 void KeyMap::setupDefaultBindings()
@@ -197,4 +202,189 @@ QString KeyMap::generateTooltip() const
     tooltip += "  Side Scroll - Seek (= C/V)";
 
     return tooltip;
+}
+
+QString KeyMap::actionToString(Action action) const
+{
+    static const QMap<Action, QString> names = {
+        {Action::PauseAll, "PauseAll"},
+        {Action::NextAll, "NextAll"},
+        {Action::PrevAll, "PrevAll"},
+        {Action::ShuffleAll, "ShuffleAll"},
+        {Action::ShuffleThenNextAll, "ShuffleThenNextAll"},
+        {Action::FullscreenGlobal, "FullscreenGlobal"},
+        {Action::ExitFullscreen, "ExitFullscreen"},
+        {Action::VolumeUp, "VolumeUp"},
+        {Action::VolumeDown, "VolumeDown"},
+        {Action::ToggleMute, "ToggleMute"},
+        {Action::NavigateUp, "NavigateUp"},
+        {Action::NavigateDown, "NavigateDown"},
+        {Action::NavigateLeft, "NavigateLeft"},
+        {Action::NavigateRight, "NavigateRight"},
+        {Action::FullscreenSelected, "FullscreenSelected"},
+        {Action::NextSelected, "NextSelected"},
+        {Action::PrevSelected, "PrevSelected"},
+        {Action::SeekForward, "SeekForward"},
+        {Action::SeekBackward, "SeekBackward"},
+        {Action::SeekForwardLong, "SeekForwardLong"},
+        {Action::SeekBackwardLong, "SeekBackwardLong"},
+        {Action::FrameStepForward, "FrameStepForward"},
+        {Action::FrameStepBackward, "FrameStepBackward"},
+        {Action::ToggleLoop, "ToggleLoop"},
+        {Action::TogglePauseSelected, "TogglePauseSelected"},
+        {Action::ShowPlaylistPicker, "ShowPlaylistPicker"},
+        {Action::ZoomIn, "ZoomIn"},
+        {Action::ZoomOut, "ZoomOut"},
+        {Action::Rotate, "Rotate"},
+        {Action::Screenshot, "Screenshot"},
+        {Action::PanicReset, "PanicReset"},
+        {Action::NoAction, "NoAction"}
+    };
+    return names.value(action, "Unknown");
+}
+
+KeyMap::Action KeyMap::stringToAction(const QString &str)
+{
+    static const QMap<QString, Action> names = {
+        {"PauseAll", Action::PauseAll},
+        {"NextAll", Action::NextAll},
+        {"PrevAll", Action::PrevAll},
+        {"ShuffleAll", Action::ShuffleAll},
+        {"ShuffleThenNextAll", Action::ShuffleThenNextAll},
+        {"FullscreenGlobal", Action::FullscreenGlobal},
+        {"ExitFullscreen", Action::ExitFullscreen},
+        {"VolumeUp", Action::VolumeUp},
+        {"VolumeDown", Action::VolumeDown},
+        {"ToggleMute", Action::ToggleMute},
+        {"NavigateUp", Action::NavigateUp},
+        {"NavigateDown", Action::NavigateDown},
+        {"NavigateLeft", Action::NavigateLeft},
+        {"NavigateRight", Action::NavigateRight},
+        {"FullscreenSelected", Action::FullscreenSelected},
+        {"NextSelected", Action::NextSelected},
+        {"PrevSelected", Action::PrevSelected},
+        {"SeekForward", Action::SeekForward},
+        {"SeekBackward", Action::SeekBackward},
+        {"SeekForwardLong", Action::SeekForwardLong},
+        {"SeekBackwardLong", Action::SeekBackwardLong},
+        {"FrameStepForward", Action::FrameStepForward},
+        {"FrameStepBackward", Action::FrameStepBackward},
+        {"ToggleLoop", Action::ToggleLoop},
+        {"TogglePauseSelected", Action::TogglePauseSelected},
+        {"ShowPlaylistPicker", Action::ShowPlaylistPicker},
+        {"ZoomIn", Action::ZoomIn},
+        {"ZoomOut", Action::ZoomOut},
+        {"Rotate", Action::Rotate},
+        {"Screenshot", Action::Screenshot},
+        {"PanicReset", Action::PanicReset}
+    };
+    return names.value(str, Action::NoAction);
+}
+
+QList<QPair<KeyMap::Action, KeyMap::KeyBinding>> KeyMap::getAllBindings() const
+{
+    QList<QPair<Action, KeyBinding>> result;
+
+    // Get unique actions
+    QSet<Action> seen;
+    for (auto it = m_bindings.constBegin(); it != m_bindings.constEnd(); ++it) {
+        Action action = it.value();
+        if (action != Action::NoAction && !seen.contains(action)) {
+            seen.insert(action);
+            result.append({action, it.key()});
+        }
+    }
+
+    // Sort by action for consistent display
+    std::sort(result.begin(), result.end(), [](const auto &a, const auto &b) {
+        return static_cast<int>(a.first) < static_cast<int>(b.first);
+    });
+
+    return result;
+}
+
+void KeyMap::setBinding(Action action, Qt::Key key, Qt::KeyboardModifiers mods)
+{
+    // Remove old binding for this action
+    removeBinding(action);
+
+    // Add new binding
+    KeyBinding binding{key, mods};
+    m_bindings[binding] = action;
+
+    saveToDatabase();
+}
+
+void KeyMap::removeBinding(Action action)
+{
+    QList<KeyBinding> toRemove;
+    for (auto it = m_bindings.constBegin(); it != m_bindings.constEnd(); ++it) {
+        if (it.value() == action) {
+            toRemove.append(it.key());
+        }
+    }
+    for (const auto &binding : toRemove) {
+        m_bindings.remove(binding);
+    }
+}
+
+void KeyMap::resetToDefaults()
+{
+    m_bindings.clear();
+    setupDefaultBindings();
+
+    // Clear database bindings
+    if (StatsManager::instance().isInitialized()) {
+        QSqlDatabase db = QSqlDatabase::database("stats_connection");
+        QSqlQuery query(db);
+        query.exec("DELETE FROM key_bindings");
+    }
+}
+
+void KeyMap::loadFromDatabase()
+{
+    if (!StatsManager::instance().isInitialized()) {
+        return;
+    }
+
+    QSqlDatabase db = QSqlDatabase::database("stats_connection");
+    QSqlQuery query(db);
+
+    if (query.exec("SELECT action, key_code, modifiers FROM key_bindings")) {
+        while (query.next()) {
+            QString actionStr = query.value(0).toString();
+            int keyCode = query.value(1).toInt();
+            int mods = query.value(2).toInt();
+
+            Action action = stringToAction(actionStr);
+            if (action != Action::NoAction) {
+                // Remove default binding and add custom one
+                removeBinding(action);
+                KeyBinding binding{static_cast<Qt::Key>(keyCode), static_cast<Qt::KeyboardModifiers>(mods)};
+                m_bindings[binding] = action;
+            }
+        }
+    }
+}
+
+void KeyMap::saveToDatabase()
+{
+    if (!StatsManager::instance().isInitialized()) {
+        return;
+    }
+
+    QSqlDatabase db = QSqlDatabase::database("stats_connection");
+    QSqlQuery query(db);
+
+    // Clear existing and save all current bindings
+    query.exec("DELETE FROM key_bindings");
+
+    query.prepare("INSERT INTO key_bindings (action, key_code, modifiers) VALUES (?, ?, ?)");
+
+    for (auto it = m_bindings.constBegin(); it != m_bindings.constEnd(); ++it) {
+        query.addBindValue(actionToString(it.value()));
+        query.addBindValue(static_cast<int>(it.key().key));
+        query.addBindValue(static_cast<int>(it.key().modifiers));
+        query.exec();
+    }
 }

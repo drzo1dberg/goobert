@@ -1,6 +1,7 @@
 #include "gridcell.h"
 #include "config.h"
 #include "theme.h"
+#include "statsmanager.h"
 #include <QVBoxLayout>
 #include <QMouseEvent>
 #include <QWheelEvent>
@@ -32,6 +33,11 @@ GridCell::GridCell(int row, int col, QWidget *parent)
     m_loopIndicator->setFixedSize(42, 18);
     m_loopIndicator->setAlignment(Qt::AlignCenter);
     m_loopIndicator->hide();
+
+    // Apply skipper settings from Config
+    Config &cfg = Config::instance();
+    m_mpv->setSkipperEnabled(cfg.skipperEnabled());
+    m_mpv->setSkipPercent(cfg.skipPercent());
 
     connect(m_mpv, &MpvWidget::fileChanged, this, &GridCell::onFileChanged);
     connect(m_mpv, &MpvWidget::positionChanged, this, &GridCell::onPositionChanged);
@@ -77,6 +83,10 @@ void GridCell::play()
 
 void GridCell::stop()
 {
+    // Stop stats tracking
+    if (Config::instance().statsEnabled()) {
+        StatsManager::instance().stopWatching(m_row, m_col);
+    }
     m_mpv->stop();
 }
 
@@ -88,6 +98,14 @@ void GridCell::pause()
 void GridCell::togglePause()
 {
     m_mpv->togglePause();
+
+    // Log pause event and update stats
+    Config &cfg = Config::instance();
+    if (cfg.statsEnabled() && !m_currentFile.isEmpty()) {
+        bool willBePaused = !m_paused;  // State after toggle
+        StatsManager::instance().setPaused(m_row, m_col, willBePaused);
+        StatsManager::instance().logPauseEvent(m_currentFile, m_position, willBePaused);
+    }
 }
 
 void GridCell::next()
@@ -138,6 +156,11 @@ void GridCell::setLoopFile(bool loop)
 void GridCell::toggleLoopFile()
 {
     m_mpv->toggleLoopFile();
+
+    // Log loop toggle event
+    if (Config::instance().statsEnabled() && !m_currentFile.isEmpty()) {
+        StatsManager::instance().logLoopToggle(m_currentFile, !m_looping);
+    }
 }
 
 bool GridCell::isLoopFile() const noexcept
@@ -340,13 +363,35 @@ void GridCell::wheelEvent(QWheelEvent *event)
 
 void GridCell::onFileChanged(const QString &path)
 {
+    // Stop tracking previous file
+    Config &cfg = Config::instance();
+    if (cfg.statsEnabled() && !m_currentFile.isEmpty()) {
+        StatsManager::instance().stopWatching(m_row, m_col);
+    }
+
     m_currentFile = path;
     emit fileChanged(m_row, m_col, path, m_position, m_duration, m_paused);
+
+    // Start tracking new file
+    if (cfg.statsEnabled() && !path.isEmpty()) {
+        bool isImage = path.endsWith(".jpg", Qt::CaseInsensitive) ||
+                       path.endsWith(".jpeg", Qt::CaseInsensitive) ||
+                       path.endsWith(".png", Qt::CaseInsensitive) ||
+                       path.endsWith(".gif", Qt::CaseInsensitive) ||
+                       path.endsWith(".bmp", Qt::CaseInsensitive) ||
+                       path.endsWith(".webp", Qt::CaseInsensitive);
+        StatsManager::instance().startWatching(m_row, m_col, path, m_duration, isImage);
+    }
 }
 
 void GridCell::onPositionChanged(double pos)
 {
     m_position = pos;
+
+    // Update stats position
+    if (Config::instance().statsEnabled()) {
+        StatsManager::instance().updatePosition(m_row, m_col, pos);
+    }
 
     // Throttle to ~4Hz to avoid excessive UI updates
     using namespace GridCellConstants;

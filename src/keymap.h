@@ -51,22 +51,7 @@ public:
         NoAction
     };
 
-    static KeyMap& instance();
-
-    // Get action for a key
-    Action getAction(QKeyEvent *event) const;
-
-    // Get all keys for an action
-    QList<QString> getKeysForAction(Action action) const;
-
-    // Get human-readable description
-    QString getActionDescription(Action action) const;
-    QString getKeyDescription(Qt::Key key, Qt::KeyboardModifiers mods = Qt::NoModifier) const;
-
-    // Generate tooltip with all shortcuts
-    QString generateTooltip() const;
-
-    // KeyBinding struct needs to be public for qHash
+    // KeyBinding struct - must be declared before methods that use it
     struct KeyBinding {
         Qt::Key key;
         Qt::KeyboardModifiers modifiers;
@@ -80,6 +65,35 @@ public:
             return modifiers < other.modifiers;
         }
     };
+
+    static KeyMap& instance();
+
+    // Get action for a key
+    Action getAction(QKeyEvent *event) const;
+
+    // Get all keys for an action
+    QList<QString> getKeysForAction(Action action) const;
+
+    // Get human-readable description
+    QString getActionDescription(Action action) const;
+    QString getKeyDescription(Qt::Key key, Qt::KeyboardModifiers mods = Qt::NoModifier) const;
+    QString actionToString(Action action) const;
+    static Action stringToAction(const QString &str);
+
+    // Generate tooltip with all shortcuts
+    QString generateTooltip() const;
+
+    // Get all bindings for settings UI
+    QList<QPair<Action, KeyBinding>> getAllBindings() const;
+
+    // Modify bindings
+    void setBinding(Action action, Qt::Key key, Qt::KeyboardModifiers mods = Qt::NoModifier);
+    void removeBinding(Action action);
+    void resetToDefaults();
+
+    // Persistence
+    void loadFromDatabase();
+    void saveToDatabase();
 
 private:
     KeyMap();
