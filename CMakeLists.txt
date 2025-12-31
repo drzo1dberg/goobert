@@ -21,7 +21,7 @@ if(APPLE)
 endif()
 
 # Find packages
-find_package(Qt6 REQUIRED COMPONENTS Widgets OpenGLWidgets Network)
+find_package(Qt6 REQUIRED COMPONENTS Widgets OpenGLWidgets Network Sql)
 find_package(PkgConfig REQUIRED)
 pkg_check_modules(MPV REQUIRED mpv)
 
@@ -39,6 +39,8 @@ set(SOURCES
     src/filescanner.cpp
     src/config.cpp
     src/keymap.cpp
+    src/statsmanager.cpp
+    src/settingsdialog.cpp
 )
 
 set(HEADERS
@@ -54,6 +56,8 @@ set(HEADERS
     src/config.h
     src/keymap.h
     src/theme.h
+    src/statsmanager.h
+    src/settingsdialog.h
 )
 
 # Executable
@@ -77,6 +81,7 @@ target_link_libraries(goobert PRIVATE
     Qt6::Widgets
     Qt6::OpenGLWidgets
     Qt6::Network
+    Qt6::Sql
     ${MPV_LIBRARIES}
 )
 

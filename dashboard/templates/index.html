@@ -1,0 +1,790 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Goobert Stats Dashboard</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        :root {
+            --bg-primary: #0a0a0f;
+            --bg-secondary: #12121a;
+            --bg-card: #1a1a24;
+            --bg-hover: #22222e;
+            --accent: #00d4ff;
+            --accent-dim: #0099bb;
+            --text-primary: #f0f0f5;
+            --text-secondary: #a0a0b0;
+            --text-muted: #606070;
+            --border: #2a2a3a;
+            --success: #00ff88;
+            --warning: #ffaa00;
+            --error: #ff4466;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            min-height: 100vh;
+        }
+
+        .header {
+            background: linear-gradient(180deg, var(--bg-secondary) 0%, var(--bg-primary) 100%);
+            padding: 24px 32px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .header h1 {
+            font-size: 24px;
+            font-weight: 600;
+            color: var(--accent);
+        }
+
+        .header .subtitle {
+            color: var(--text-muted);
+            font-size: 14px;
+            margin-top: 4px;
+        }
+
+        .refresh-btn {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            color: var(--text-primary);
+            padding: 8px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.2s;
+        }
+
+        .refresh-btn:hover {
+            background: var(--bg-hover);
+            border-color: var(--accent);
+        }
+
+        .container {
+            max-width: 1600px;
+            margin: 0 auto;
+            padding: 24px;
+        }
+
+        .grid {
+            display: grid;
+            gap: 20px;
+        }
+
+        .grid-4 {
+            grid-template-columns: repeat(4, 1fr);
+        }
+
+        .grid-3 {
+            grid-template-columns: repeat(3, 1fr);
+        }
+
+        .grid-2 {
+            grid-template-columns: repeat(2, 1fr);
+        }
+
+        @media (max-width: 1200px) {
+            .grid-4 { grid-template-columns: repeat(2, 1fr); }
+            .grid-3 { grid-template-columns: repeat(2, 1fr); }
+        }
+
+        @media (max-width: 768px) {
+            .grid-4, .grid-3, .grid-2 { grid-template-columns: 1fr; }
+        }
+
+        .card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 20px;
+        }
+
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+        }
+
+        .card-title {
+            font-size: 14px;
+            font-weight: 500;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .stat-card {
+            text-align: center;
+            padding: 24px 20px;
+        }
+
+        .stat-value {
+            font-size: 32px;
+            font-weight: 700;
+            color: var(--text-primary);
+            margin-bottom: 4px;
+        }
+
+        .stat-value.accent {
+            color: var(--accent);
+        }
+
+        .stat-value.success {
+            color: var(--success);
+        }
+
+        .stat-label {
+            font-size: 13px;
+            color: var(--text-muted);
+        }
+
+        .stat-sublabel {
+            font-size: 11px;
+            color: var(--text-muted);
+            margin-top: 8px;
+            opacity: 0.7;
+        }
+
+        .chart-container {
+            position: relative;
+            height: 300px;
+        }
+
+        .table-container {
+            overflow-x: auto;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13px;
+        }
+
+        th, td {
+            padding: 12px 16px;
+            text-align: left;
+            border-bottom: 1px solid var(--border);
+        }
+
+        th {
+            color: var(--text-secondary);
+            font-weight: 500;
+            font-size: 12px;
+            text-transform: uppercase;
+        }
+
+        td {
+            color: var(--text-primary);
+        }
+
+        tr:hover {
+            background: var(--bg-hover);
+        }
+
+        .file-name {
+            max-width: 300px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: 500;
+        }
+
+        .badge-image {
+            background: var(--accent-dim);
+            color: white;
+        }
+
+        .badge-video {
+            background: var(--success);
+            color: black;
+        }
+
+        .section {
+            margin-bottom: 32px;
+        }
+
+        .section-title {
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 16px;
+            color: var(--text-primary);
+        }
+
+        .tabs {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 16px;
+        }
+
+        .tab {
+            padding: 8px 16px;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            color: var(--text-secondary);
+            cursor: pointer;
+            font-size: 13px;
+            transition: all 0.2s;
+        }
+
+        .tab:hover {
+            background: var(--bg-hover);
+        }
+
+        .tab.active {
+            background: var(--accent);
+            color: var(--bg-primary);
+            border-color: var(--accent);
+        }
+
+        .comparison-box {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 32px;
+            padding: 24px;
+        }
+
+        .comparison-item {
+            text-align: center;
+        }
+
+        .comparison-vs {
+            font-size: 24px;
+            color: var(--text-muted);
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: var(--text-muted);
+        }
+
+        .event-type {
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 11px;
+        }
+
+        .event-skip { background: var(--warning); color: black; }
+        .event-loop { background: var(--accent); color: black; }
+        .event-fullscreen { background: #9966ff; color: white; }
+
+        .highlight-row {
+            background: rgba(0, 212, 255, 0.05);
+        }
+
+        .copy-btn {
+            background: var(--bg-hover);
+            border: 1px solid var(--border);
+            color: var(--text-secondary);
+            padding: 2px 8px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 11px;
+            margin-left: 8px;
+        }
+
+        .copy-btn:hover {
+            background: var(--accent);
+            color: var(--bg-primary);
+        }
+
+        .copy-btn.copied {
+            background: var(--success);
+            color: black;
+        }
+
+        .path-cell {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .path-text {
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            max-width: 400px;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div>
+            <h1>Goobert Stats Dashboard</h1>
+            <div class="subtitle">Real-time watch statistics from your video wall</div>
+        </div>
+        <button class="refresh-btn" onclick="refreshAll()">Refresh Data</button>
+    </div>
+
+    <div class="container">
+        <!-- Summary Stats -->
+        <div class="section">
+            <div class="grid grid-4" id="summary-stats">
+                <div class="card stat-card">
+                    <div class="stat-value accent" id="real-time">--</div>
+                    <div class="stat-label">Real Elapsed Time</div>
+                    <div class="stat-sublabel">Actual time spent watching</div>
+                </div>
+                <div class="card stat-card">
+                    <div class="stat-value" id="accumulated-time">--</div>
+                    <div class="stat-label">Accumulated Watch Time</div>
+                    <div class="stat-sublabel">Sum of all cell playback</div>
+                </div>
+                <div class="card stat-card">
+                    <div class="stat-value success" id="parallelism">--</div>
+                    <div class="stat-label">Parallelism Factor</div>
+                    <div class="stat-sublabel">Avg cells playing at once</div>
+                </div>
+                <div class="card stat-card">
+                    <div class="stat-value" id="files-tracked">--</div>
+                    <div class="stat-label">Files Tracked</div>
+                    <div class="stat-sublabel">Unique media files</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Today's Stats -->
+        <div class="section">
+            <h2 class="section-title">Today's Activity</h2>
+            <div class="grid grid-4">
+                <div class="card stat-card">
+                    <div class="stat-value accent" id="today-real">--</div>
+                    <div class="stat-label">Real Time Today</div>
+                </div>
+                <div class="card stat-card">
+                    <div class="stat-value" id="today-accumulated">--</div>
+                    <div class="stat-label">Accumulated Today</div>
+                </div>
+                <div class="card stat-card">
+                    <div class="stat-value" id="today-sessions">--</div>
+                    <div class="stat-label">Sessions Today</div>
+                </div>
+                <div class="card stat-card">
+                    <div class="stat-value" id="avg-session">--</div>
+                    <div class="stat-label">Avg Session Length</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Charts Row -->
+        <div class="section">
+            <div class="grid grid-2">
+                <div class="card">
+                    <div class="card-header">
+                        <span class="card-title">Hourly Distribution</span>
+                    </div>
+                    <div class="chart-container">
+                        <canvas id="hourlyChart"></canvas>
+                    </div>
+                </div>
+                <div class="card">
+                    <div class="card-header">
+                        <span class="card-title">Daily Distribution</span>
+                    </div>
+                    <div class="chart-container">
+                        <canvas id="dailyChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Timeline Chart -->
+        <div class="section">
+            <div class="card">
+                <div class="card-header">
+                    <span class="card-title">Activity Timeline (Last 30 Days)</span>
+                </div>
+                <div class="chart-container">
+                    <canvas id="timelineChart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- Peak Stats -->
+        <div class="section">
+            <div class="grid grid-4">
+                <div class="card stat-card">
+                    <div class="stat-value" id="peak-hour">--</div>
+                    <div class="stat-label">Peak Hour</div>
+                </div>
+                <div class="card stat-card">
+                    <div class="stat-value" id="peak-day">--</div>
+                    <div class="stat-label">Peak Day</div>
+                </div>
+                <div class="card stat-card">
+                    <div class="stat-value" id="total-skips">--</div>
+                    <div class="stat-label">Total Skips</div>
+                </div>
+                <div class="card stat-card">
+                    <div class="stat-value" id="total-screenshots">--</div>
+                    <div class="stat-label">Screenshots</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tables Row -->
+        <div class="section">
+            <div class="grid grid-2">
+                <!-- Top Files -->
+                <div class="card">
+                    <div class="card-header">
+                        <span class="card-title">Most Watched Files</span>
+                    </div>
+                    <div class="table-container">
+                        <table id="top-files-table">
+                            <thead>
+                                <tr>
+                                    <th>File</th>
+                                    <th>Watch Time</th>
+                                    <th>Plays</th>
+                                    <th>Type</th>
+                                    <th>Path</th>
+                                </tr>
+                            </thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Top Directories -->
+                <div class="card">
+                    <div class="card-header">
+                        <span class="card-title">Top Directories</span>
+                    </div>
+                    <div class="table-container">
+                        <table id="directories-table">
+                            <thead>
+                                <tr>
+                                    <th>Directory</th>
+                                    <th>Watch Time</th>
+                                    <th>Files</th>
+                                </tr>
+                            </thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Recent Sessions -->
+        <div class="section">
+            <div class="card">
+                <div class="card-header">
+                    <span class="card-title">Recent Watch Sessions</span>
+                </div>
+                <div class="table-container">
+                    <table id="sessions-table">
+                        <thead>
+                            <tr>
+                                <th>Started</th>
+                                <th>File</th>
+                                <th>Duration</th>
+                                <th>Cell</th>
+                                <th>Path</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Grid Sessions -->
+        <div class="section">
+            <div class="card">
+                <div class="card-header">
+                    <span class="card-title">Grid Sessions</span>
+                </div>
+                <div class="table-container">
+                    <table id="grid-sessions-table">
+                        <thead>
+                            <tr>
+                                <th>Time</th>
+                                <th>Action</th>
+                                <th>Grid</th>
+                                <th>Source</th>
+                                <th>Filter</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let hourlyChart, dailyChart, timelineChart;
+
+        const chartColors = {
+            accent: '#00d4ff',
+            accentDim: 'rgba(0, 212, 255, 0.3)',
+            success: '#00ff88',
+            successDim: 'rgba(0, 255, 136, 0.3)',
+            grid: 'rgba(255, 255, 255, 0.05)',
+            text: '#a0a0b0'
+        };
+
+        async function fetchData(endpoint) {
+            const response = await fetch(`/api/${endpoint}`);
+            return response.json();
+        }
+
+        async function loadSummary() {
+            const data = await fetchData('summary');
+
+            document.getElementById('real-time').textContent = data.real_elapsed_time;
+            document.getElementById('accumulated-time').textContent = data.accumulated_watch_time;
+            document.getElementById('parallelism').textContent = data.parallelism_factor + 'x';
+            document.getElementById('files-tracked').textContent = data.files_tracked;
+
+            document.getElementById('today-real').textContent = data.today_real_time;
+            document.getElementById('today-accumulated').textContent = data.today_accumulated_time;
+            document.getElementById('today-sessions').textContent = data.today_sessions;
+            document.getElementById('avg-session').textContent = data.avg_session_length;
+
+            document.getElementById('peak-hour').textContent = data.peak_hour;
+            document.getElementById('peak-day').textContent = data.peak_day;
+            document.getElementById('total-skips').textContent = data.total_skips;
+            document.getElementById('total-screenshots').textContent = data.total_screenshots;
+        }
+
+        async function loadHourlyChart() {
+            const data = await fetchData('hourly');
+
+            if (hourlyChart) hourlyChart.destroy();
+
+            hourlyChart = new Chart(document.getElementById('hourlyChart'), {
+                type: 'bar',
+                data: {
+                    labels: data.labels,
+                    datasets: [{
+                        label: 'Watch Time (min)',
+                        data: data.watch_time,
+                        backgroundColor: chartColors.accentDim,
+                        borderColor: chartColors.accent,
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false }
+                    },
+                    scales: {
+                        x: {
+                            grid: { color: chartColors.grid },
+                            ticks: { color: chartColors.text }
+                        },
+                        y: {
+                            grid: { color: chartColors.grid },
+                            ticks: { color: chartColors.text }
+                        }
+                    }
+                }
+            });
+        }
+
+        async function loadDailyChart() {
+            const data = await fetchData('daily');
+
+            if (dailyChart) dailyChart.destroy();
+
+            dailyChart = new Chart(document.getElementById('dailyChart'), {
+                type: 'bar',
+                data: {
+                    labels: data.labels,
+                    datasets: [{
+                        label: 'Watch Time (min)',
+                        data: data.watch_time,
+                        backgroundColor: chartColors.successDim,
+                        borderColor: chartColors.success,
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false }
+                    },
+                    scales: {
+                        x: {
+                            grid: { color: chartColors.grid },
+                            ticks: { color: chartColors.text }
+                        },
+                        y: {
+                            grid: { color: chartColors.grid },
+                            ticks: { color: chartColors.text }
+                        }
+                    }
+                }
+            });
+        }
+
+        async function loadTimelineChart() {
+            const data = await fetchData('timeline');
+
+            if (timelineChart) timelineChart.destroy();
+
+            timelineChart = new Chart(document.getElementById('timelineChart'), {
+                type: 'line',
+                data: {
+                    labels: data.map(d => d.date),
+                    datasets: [
+                        {
+                            label: 'Real Time (min)',
+                            data: data.map(d => d.real_minutes),
+                            borderColor: chartColors.accent,
+                            backgroundColor: chartColors.accentDim,
+                            fill: true,
+                            tension: 0.3
+                        },
+                        {
+                            label: 'Accumulated (min)',
+                            data: data.map(d => d.accumulated_minutes),
+                            borderColor: chartColors.success,
+                            backgroundColor: 'transparent',
+                            borderDash: [5, 5],
+                            tension: 0.3
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            labels: { color: chartColors.text }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            grid: { color: chartColors.grid },
+                            ticks: { color: chartColors.text }
+                        },
+                        y: {
+                            grid: { color: chartColors.grid },
+                            ticks: { color: chartColors.text }
+                        }
+                    }
+                }
+            });
+        }
+
+        function copyToClipboard(text, btn) {
+            navigator.clipboard.writeText(text).then(() => {
+                btn.textContent = 'Copied!';
+                btn.classList.add('copied');
+                setTimeout(() => {
+                    btn.textContent = 'Copy';
+                    btn.classList.remove('copied');
+                }, 1500);
+            });
+        }
+
+        async function loadTopFiles() {
+            const data = await fetchData('top-files?limit=15');
+            const tbody = document.querySelector('#top-files-table tbody');
+            tbody.innerHTML = data.map((f, i) => `
+                <tr>
+                    <td class="file-name" title="${f.path}">${f.file}</td>
+                    <td>${f.watch_time}</td>
+                    <td>${f.play_count}</td>
+                    <td><span class="badge ${f.is_image ? 'badge-image' : 'badge-video'}">${f.is_image ? 'IMG' : 'VID'}</span></td>
+                    <td class="path-cell">
+                        <span class="path-text" title="${f.path}">${f.path}</span>
+                        <button class="copy-btn" onclick="copyToClipboard('${f.path.replace(/'/g, "\\'")}', this)">Copy</button>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        async function loadDirectories() {
+            const data = await fetchData('directories');
+            const tbody = document.querySelector('#directories-table tbody');
+            tbody.innerHTML = data.map(d => `
+                <tr>
+                    <td class="file-name" title="${d.directory}">${d.short_name}</td>
+                    <td>${d.watch_time}</td>
+                    <td>${d.file_count}</td>
+                </tr>
+            `).join('');
+        }
+
+        async function loadRecentSessions() {
+            const data = await fetchData('recent-sessions?limit=20');
+            const tbody = document.querySelector('#sessions-table tbody');
+            tbody.innerHTML = data.map(s => `
+                <tr>
+                    <td>${s.started}</td>
+                    <td class="file-name" title="${s.path}">${s.file}</td>
+                    <td>${s.duration}</td>
+                    <td>${s.cell}</td>
+                    <td class="path-cell">
+                        <span class="path-text" title="${s.path}">${s.path}</span>
+                        <button class="copy-btn" onclick="copyToClipboard('${s.path.replace(/'/g, "\\'")}', this)">Copy</button>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        async function loadGridSessions() {
+            const data = await fetchData('grid-sessions');
+            const tbody = document.querySelector('#grid-sessions-table tbody');
+            tbody.innerHTML = data.map(s => `
+                <tr class="${s.action === 'Started' ? 'highlight-row' : ''}">
+                    <td>${s.time}</td>
+                    <td>${s.action}</td>
+                    <td>${s.grid}</td>
+                    <td class="file-name">${s.source}</td>
+                    <td>${s.filter}</td>
+                </tr>
+            `).join('');
+        }
+
+        async function refreshAll() {
+            await Promise.all([
+                loadSummary(),
+                loadHourlyChart(),
+                loadDailyChart(),
+                loadTimelineChart(),
+                loadTopFiles(),
+                loadDirectories(),
+                loadRecentSessions(),
+                loadGridSessions()
+            ]);
+        }
+
+        // Initial load
+        refreshAll();
+
+        // Auto-refresh every 30 seconds
+        setInterval(refreshAll, 30000);
+    </script>
+</body>
+</html>

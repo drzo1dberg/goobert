@@ -37,6 +37,7 @@ signals:
     void volumeChanged(int volume);
     void toggleSidePanel();
     void browseClicked();
+    void settingsClicked();
 
 private:
     void setupUi();

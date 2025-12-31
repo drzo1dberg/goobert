@@ -175,6 +175,14 @@ void ToolBar::setupUi()
     connect(panelBtn, &QPushButton::clicked, this, &ToolBar::toggleSidePanel);
     addWidget(panelBtn);
 
+    // Settings button
+    auto *settingsBtn = new QPushButton("S");
+    settingsBtn->setStyleSheet(btn);
+    settingsBtn->setFixedWidth(24);
+    settingsBtn->setToolTip("Settings");
+    connect(settingsBtn, &QPushButton::clicked, this, &ToolBar::settingsClicked);
+    addWidget(settingsBtn);
+
     // Spacer
     auto *spacer = new QWidget();
     spacer->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Preferred);

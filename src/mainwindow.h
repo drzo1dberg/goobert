@@ -12,6 +12,7 @@
 #include "gridcell.h"
 #include "toolbar.h"
 #include "sidepanel.h"
+#include "settingsdialog.h"
 
 // Constants
 namespace MainWindowConstants {
@@ -86,6 +87,7 @@ private slots:
     void navigateSelection(int colDelta, int rowDelta);
     void watchdogCheck();
     void log(const QString &message);
+    void showSettings();
 
 private:
     void setupUi();
