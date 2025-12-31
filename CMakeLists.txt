@@ -36,7 +36,6 @@ set(SOURCES
     src/monitorwidget.cpp
     src/playlistwidget.cpp
     src/playlistpicker.cpp
-    src/configpanel.cpp
     src/filescanner.cpp
     src/config.cpp
     src/keymap.cpp
@@ -51,10 +50,10 @@ set(HEADERS
     src/monitorwidget.h
     src/playlistwidget.h
     src/playlistpicker.h
-    src/configpanel.h
     src/filescanner.h
     src/config.h
     src/keymap.h
+    src/theme.h
 )
 
 # Executable
