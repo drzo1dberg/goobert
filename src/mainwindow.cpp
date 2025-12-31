@@ -2,6 +2,7 @@
 #include "filescanner.h"
 #include "config.h"
 #include "keymap.h"
+#include "playlistpicker.h"
 #include <QKeyEvent>
 #include <QWheelEvent>
 #include <QMouseEvent>
@@ -264,17 +265,24 @@ void MainWindow::clearGrid()
 
 bool MainWindow::eventFilter(QObject *watched, QEvent *event)
 {
-    // Intercept key presses for arrow keys, p, f, space from any child widget
+    // Intercept key presses from any child widget
     if (event->type() == QEvent::KeyPress) {
         QKeyEvent *keyEvent = static_cast<QKeyEvent*>(event);
         int key = keyEvent->key();
 
-        // Only handle specific keys that we want to intercept
-        if (key == Qt::Key_Up || key == Qt::Key_Down ||
-            key == Qt::Key_Left || key == Qt::Key_Right ||
-            key == Qt::Key_P || key == Qt::Key_F || key == Qt::Key_Space ||
-            key == Qt::Key_V || key == Qt::Key_C ||
-            key == Qt::Key_B || key == Qt::Key_N) {
+        // Handle keys used in our one-handed layout
+        // Number row: 1-6, backtick
+        // Letter keys: Q, W, E, R, T, Y, A, S, D, F, G, Z, X, C, V, B
+        // Special: Tab, Space, Escape
+        if (key == Qt::Key_Space || key == Qt::Key_Tab || key == Qt::Key_Escape ||
+            key == Qt::Key_QuoteLeft ||  // backtick
+            (key >= Qt::Key_1 && key <= Qt::Key_6) ||
+            key == Qt::Key_Q || key == Qt::Key_W || key == Qt::Key_E ||
+            key == Qt::Key_R || key == Qt::Key_T || key == Qt::Key_Y ||
+            key == Qt::Key_A || key == Qt::Key_S || key == Qt::Key_D ||
+            key == Qt::Key_F || key == Qt::Key_G || key == Qt::Key_Z ||
+            key == Qt::Key_X || key == Qt::Key_C || key == Qt::Key_V ||
+            key == Qt::Key_B) {
 
             // Forward to our keyPressEvent
             keyPressEvent(keyEvent);
@@ -302,6 +310,9 @@ void MainWindow::keyPressEvent(QKeyEvent *event)
     case KeyMap::Action::VolumeDown:
         volumeDownAll();
         break;
+    case KeyMap::Action::ToggleMute:
+        muteAll();
+        break;
     case KeyMap::Action::NextAll:
         nextAll();
         break;
@@ -316,6 +327,9 @@ void MainWindow::keyPressEvent(QKeyEvent *event)
         break;
     case KeyMap::Action::ExitFullscreen:
         exitFullscreen();
+        break;
+    case KeyMap::Action::PanicReset:
+        panicReset();
         break;
 
     // Navigation
@@ -354,6 +368,12 @@ void MainWindow::keyPressEvent(QKeyEvent *event)
         break;
     case KeyMap::Action::ToggleLoop:
         toggleLoopSelected();
+        break;
+    case KeyMap::Action::TogglePauseSelected:
+        togglePauseSelected();
+        break;
+    case KeyMap::Action::ShowPlaylistPicker:
+        showPlaylistPicker();
         break;
     case KeyMap::Action::NextSelected:
         if (m_selectedCell) m_selectedCell->next();
@@ -410,6 +430,17 @@ void MainWindow::exitFullscreen()
         statusBar()->show();
         log("Fullscreen OFF");
     }
+}
+
+void MainWindow::panicReset()
+{
+    // Exit any fullscreen mode first
+    exitFullscreen();
+
+    // Stop all playback and clear grid
+    stopGrid();
+
+    log("PANIC! Session reset");
 }
 
 void MainWindow::enterTileFullscreen(int row, int col)
@@ -592,6 +623,33 @@ void MainWindow::toggleLoopSelected()
 {
     if (GridCell *cell = selectedCell()) {
         cell->toggleLoopFile();
+    }
+}
+
+void MainWindow::togglePauseSelected()
+{
+    if (GridCell *cell = selectedCell()) {
+        cell->togglePause();
+    }
+}
+
+void MainWindow::showPlaylistPicker()
+{
+    if (!m_selectedCell || m_selectedRow < 0 || m_selectedCol < 0) return;
+
+    // Get playlist for selected cell
+    QStringList playlist = m_cellPlaylists.value({m_selectedRow, m_selectedCol});
+    if (playlist.isEmpty()) return;
+
+    // Show picker dialog
+    PlaylistPicker picker(playlist, this);
+    if (picker.exec() == QDialog::Accepted) {
+        int index = picker.selectedIndex();
+        if (index >= 0) {
+            // Jump to index in existing playlist (preserves playlist order)
+            m_selectedCell->playIndex(index);
+            log(QString("Playing %1").arg(QFileInfo(picker.selectedFile()).fileName()));
+        }
     }
 }
 

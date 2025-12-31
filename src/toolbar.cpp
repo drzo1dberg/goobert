@@ -43,7 +43,7 @@ void ToolBar::setupUi()
 
     // Fullscreen
     QAction *fsAction = addAction("Fullscreen");
-    fsAction->setToolTip("Toggle fullscreen (F11)");
+    fsAction->setToolTip("Toggle fullscreen (Tab)");
     connect(fsAction, &QAction::triggered, this, &ToolBar::fullscreenClicked);
 
     addSeparator();
@@ -69,7 +69,7 @@ void ToolBar::setupUi()
 
     // Mute
     QAction *muteAction = addAction("Mute");
-    muteAction->setToolTip("Toggle mute (M)");
+    muteAction->setToolTip("Toggle mute (`)");
     connect(muteAction, &QAction::triggered, this, &ToolBar::muteClicked);
 
     // Volume slider in a widget
@@ -84,7 +84,7 @@ void ToolBar::setupUi()
     m_volumeSlider = new QSlider(Qt::Horizontal);
     m_volumeSlider->setRange(0, 100);
     m_volumeSlider->setFixedWidth(100);
-    m_volumeSlider->setToolTip("Volume (U/I)");
+    m_volumeSlider->setToolTip("Volume (1/2)");
     connect(m_volumeSlider, &QSlider::valueChanged, this, [this](int val) {
         m_volumeLabel->setText(QString("Vol %1%").arg(val));
         emit volumeChanged(val);

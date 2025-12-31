@@ -29,6 +29,7 @@ public:
     void next();
     void prev();
     void shuffle();
+    void playIndex(int index);
     void setVolume(int volume);
     void toggleMute();
     void mute();

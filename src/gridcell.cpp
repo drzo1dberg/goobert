@@ -90,6 +90,11 @@ void GridCell::shuffle()
     m_mpv->shuffle();
 }
 
+void GridCell::playIndex(int index)
+{
+    m_mpv->playIndex(index);
+}
+
 void GridCell::setVolume(int volume)
 {
     m_mpv->setVolume(volume);

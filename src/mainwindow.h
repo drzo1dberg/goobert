@@ -54,6 +54,7 @@ private slots:
     void stopGrid();
     void toggleFullscreen();
     void exitFullscreen();
+    void panicReset();
 
     void playPauseAll();
     void nextAll();
@@ -68,6 +69,7 @@ private slots:
 
     // Selected cell actions
     void toggleLoopSelected();
+    void togglePauseSelected();
     void frameStepSelected();
     void frameBackStepSelected();
     void rotateSelected();
@@ -75,6 +77,7 @@ private slots:
     void zoomOutSelected();
     void seekSelected(double seconds);
     void screenshotSelected();
+    void showPlaylistPicker();
 
     void onCellSelected(int row, int col);
     void onCellDoubleClicked(int row, int col);

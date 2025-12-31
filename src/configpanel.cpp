@@ -4,7 +4,6 @@
 #include <QHBoxLayout>
 #include <QFormLayout>
 #include <QFileDialog>
-#include <utility>
 
 ConfigPanel::ConfigPanel(const QString &sourceDir, QWidget *parent)
     : QWidget(parent)

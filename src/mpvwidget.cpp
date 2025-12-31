@@ -12,7 +12,6 @@
 #include <QMouseEvent>
 #include <stdexcept>
 #include <clocale>
-#include <locale>
 
 static void wakeup(void *ctx)
 {
@@ -408,6 +407,11 @@ void MpvWidget::shuffle()
     command(QVariantList{"playlist-shuffle"});
 }
 
+void MpvWidget::playIndex(int index)
+{
+    command(QVariantList{"playlist-play-index", index});
+}
+
 void MpvWidget::seek(double seconds)
 {
     command(QVariantList{"seek", seconds, "relative"});
@@ -547,6 +551,7 @@ void MpvWidget::setOsdLevel(int level)
     if (!m_mpv) return;
     setProperty("osd-level", level);
 }
+
 
 // Screenshot
 void MpvWidget::screenshot()

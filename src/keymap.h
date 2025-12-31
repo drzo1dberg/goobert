@@ -20,6 +20,7 @@ public:
         ExitFullscreen,
         VolumeUp,
         VolumeDown,
+        ToggleMute,
 
         // Navigation
         NavigateUp,
@@ -36,10 +37,13 @@ public:
         FrameStepForward,
         FrameStepBackward,
         ToggleLoop,
+        TogglePauseSelected,
+        ShowPlaylistPicker,
         ZoomIn,
         ZoomOut,
         Rotate,
         Screenshot,
+        PanicReset,
 
         // No action
         NoAction
